@@ -6,3 +6,4 @@ data
 .venv
 reports/runtime
 __pycache__
+.ruff_cache

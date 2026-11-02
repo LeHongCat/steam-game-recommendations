@@ -1,4 +1,5 @@
 """Local storage and state shared by API ingestion and Kafka delivery."""
+
 import hashlib
 import json
 import os
@@ -7,6 +8,9 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 ROOT = Path(os.environ.get("PIPELINE_ROOT", Path(__file__).resolve().parents[1]))
 DATA = ROOT / "data/steam_api"
@@ -17,7 +21,13 @@ def now():
 
 
 def dumps(value):
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=lambda value: value.isoformat())
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=_serialize_datetime)
+
+
+def _serialize_datetime(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    raise TypeError(f"Cannot serialize {type(value).__name__} to JSON")
 
 
 def digest(value):
@@ -28,15 +38,21 @@ def atomic_bytes(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
-    with temporary.open("wb") as file:
-        file.write(value)
-        file.flush()
-        os.fsync(file.fileno())
-    os.replace(temporary, path)
+    try:
+        with temporary.open("wb") as file:
+            file.write(value)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def atomic_json(path, value):
-    atomic_bytes(path, (dumps(value) + "\n").encode("utf-8"))
+    rendered = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, indent=2, default=_serialize_datetime
+    )
+    atomic_bytes(path, (rendered + "\n").encode("utf-8"))
 
 
 def read_json(path):
@@ -65,8 +81,20 @@ def database():
             run_id TEXT NOT NULL, payload_json TEXT NOT NULL, sent_at TEXT);
         CREATE TABLE IF NOT EXISTS runs (
             run_id TEXT PRIMARY KEY, manifest_json TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS pipeline_state (
+            key TEXT PRIMARY KEY, value TEXT NOT NULL);
         """)
         with db:
             yield db
     finally:
         db.close()
+
+
+def write_parquet(path, rows, schema):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
+    try:
+        pq.write_table(pa.Table.from_pylist(rows, schema=schema), temporary, compression="snappy")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)

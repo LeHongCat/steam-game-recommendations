@@ -1,1 +1,378 @@
-{"apps": {"1091500": {"done": true, "next_cursor": "AoJ4mKzOzKEDd6yikAc=", "pages": [{"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:30.918869+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:29 GMT"}, "http_status": 200, "parameters": {"appid": 1091500, "cursor": "*", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-1091500-0000.json", "row_count": 100, "sha256": "fc2029a82c9822145cf128a118f47759238f6961ff42a30b32494c1f169f86a8"}, {"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:31.904118+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:30 GMT"}, "http_status": 200, "parameters": {"appid": 1091500, "cursor": "AoJ4q62RzaEDetepkAc=", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-1091500-0001.json", "row_count": 100, "sha256": "885c4f64b59e34ba6b1521b7eb05fe2e3a538e9714cc4bbb4592dcc99096dcf2"}], "rows": 200, "stop_reason": "limit"}, "1245620": {"done": true, "next_cursor": "AoJ4/qr/xqEDePO9jwc=", "pages": [{"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:33.002536+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:31 GMT"}, "http_status": 200, "parameters": {"appid": 1245620, "cursor": "*", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-1245620-0000.json", "row_count": 100, "sha256": "5d4d7c857d1b4a9a47137e7442fb49a34cee19e7ea0671a73a2d98c3724a5c19"}, {"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:34.043235+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:32 GMT"}, "http_status": 200, "parameters": {"appid": 1245620, "cursor": "AoJ4scK8yqEDfpn6jwc=", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-1245620-0001.json", "row_count": 100, "sha256": "309862d3333466f1602d0b9e3fddafe0aabf2839d1311af759d18720e2af0ad9"}], "rows": 200, "stop_reason": "limit"}, "413150": {"done": true, "next_cursor": "AoJ44vShx6EDfIHDjwc=", "pages": [{"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:28.974422+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:27 GMT"}, "http_status": 200, "parameters": {"appid": 413150, "cursor": "*", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-413150-0000.json", "row_count": 100, "sha256": "cc2c1460f31fd40b28e685ffc2dfc3c9f5ae1dadb47bbba4180b9d47662a1b4c"}, {"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:30.101604+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:28 GMT"}, "http_status": 200, "parameters": {"appid": 413150, "cursor": "AoJw1v/wyqEDfpqAkAc=", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-413150-0001.json", "row_count": 100, "sha256": "96887aa64cc0c26f024bf9e02079d2d34c8ff91296636bd22c55104a8dc573b1"}], "rows": 200, "stop_reason": "limit"}, "570": {"done": true, "next_cursor": "AoJw2Ou0yaEDfofojwc=", "pages": [{"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:26.219144+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:24 GMT"}, "http_status": 200, "parameters": {"appid": 570, "cursor": "*", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-570-0000.json", "row_count": 100, "sha256": "1b487b0397129d3a42be3bfebb0af4cae486609d7fbc02c40733c3744cb79c3e"}, {"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:27.544332+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:26 GMT"}, "http_status": 200, "parameters": {"appid": 570, "cursor": "AoJ4wZLjy6EDeduQkAc=", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-570-0001.json", "row_count": 100, "sha256": "e9c89b817033084fb385d8d42070daa089820fca40125366f59bd202b3ac4e16"}], "rows": 200, "stop_reason": "limit"}, "730": {"done": true, "next_cursor": "AoJwy9nqzKEDceOqvgQ=", "pages": [{"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:22.943146+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:20 GMT"}, "http_status": 200, "parameters": {"appid": 730, "cursor": "*", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-730-0000.json", "row_count": 100, "sha256": "7985ad1cd8283b6c850118d5e46f23a9bd22a198eb3d592fc58729118138441c"}, {"attempts": 1, "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/", "fetched_at": "2026-11-02T10:37:23.944652+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:22 GMT"}, "http_status": 200, "parameters": {"appid": 730, "cursor": "AoJ41+iwzaEDfOeskAc=", "filter": 2, "languages": ["english"], "num_per_page": 100, "purchase_type": 1, "review_type": 0}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/reviews-730-0001.json", "row_count": 100, "sha256": "a2e417c64eebcf4c84b45e2df6ac2563354095d46279dcc9f61d9ef20ad6f690"}], "rows": 200, "stop_reason": "limit"}}, "base_run_id": "airflow-cc546d9d76ef5a0992a561a10a84f596", "catalog": {"attempts": 1, "endpoint": "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/", "fetched_at": "2026-11-02T10:37:21.398748+00:00", "headers": {"Content-Type": "application/json; charset=UTF-8", "Date": "Mon, 02 Nov 2026 10:37:20 GMT"}, "http_status": 200, "parameters": {"context": {"country_code": "US", "language": "english"}, "data_request": {"include_all_purchase_options": true, "include_basic_info": true, "include_release": true, "include_tag_count": 20}, "ids": [{"appid": 730}, {"appid": 570}, {"appid": 413150}, {"appid": 1091500}, {"appid": 1245620}]}, "path": "bronze/api/airflow-91c6d7d9546c52838f2bda54804c2f2a/catalog.json", "sha256": "0dd7cca628a9d160a6cb07ac2c42cf22ee0fd0ea056b05a5a457ebf7092d8c67"}, "checks": {"binary_feedback_preserved": true, "bronze_checksums": true, "collection_complete": true, "gold_reconciliation": true, "nonempty_reviews": true, "one_feedback_per_review": true, "requested_games_available": true, "review_reconciliation": true, "unique_review_ids": true, "valid_item_references": true, "valid_utc_timestamps": true}, "collected_at": "2026-11-02T10:37:34.092765+00:00", "collection_complete": true, "config": {"app_ids": [730, 570, 413150, 1091500, 1245620], "country_code": "US", "currency": "USD", "language": "english", "max_attempts": 3, "max_reviews_per_game": 200, "page_size": 100, "request_interval_seconds": 1.0, "timeout_seconds": 30}, "counts": {"catalog_rows_observed": 5, "changed_review_versions": 0, "duplicate_review_rows": 0, "empty_review_text": 3, "games_in_snapshot": 5, "new_review_ids": 0, "rejected_games": 0, "rejected_reviews": 0, "review_rows_observed": 1000, "reviews_in_snapshot": 1000, "unique_reviews_in_poll": 1000}, "coverage": "bounded_latest_updates", "new_events_enqueued": 0, "run_id": "airflow-91c6d7d9546c52838f2bda54804c2f2a", "source": "steam_api", "started_at": "2026-11-02T10:37:19.047048+00:00", "status": "completed", "verified_at": "2026-11-02T10:37:38.660444+00:00"}
+{
+  "apps": {
+    "1091500": {
+      "done": true,
+      "next_cursor": "AoJ43NPxzKEDdLzH1gQ=",
+      "pages": [
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:02.810507+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:02 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 1091500,
+            "cursor": "*",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-1091500-0000.json",
+          "row_count": 100,
+          "sha256": "425c4c1494ed3b83065a77090ebc0699f4cfa56209fd3d8c8a869bbed1b3ecab"
+        },
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:04.346190+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:03 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 1091500,
+            "cursor": "AoJw1Nq8zaEDe+utkAc=",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-1091500-0001.json",
+          "row_count": 100,
+          "sha256": "fce400cdf6e032b7edd83eb8c6cb2847e275cb5e3ee5c6cdfacb0bafa02fb366"
+        }
+      ],
+      "rows": 200,
+      "stop_reason": "limit"
+    },
+    "1245620": {
+      "done": true,
+      "next_cursor": "AoJwityex6EDd8vCjwc=",
+      "pages": [
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:04.766741+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:04 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 1245620,
+            "cursor": "*",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-1245620-0000.json",
+          "row_count": 100,
+          "sha256": "37e53429f8c8d2de241e7d9600391bdd0290e433773af8c17ea3f1f76e1bd846"
+        },
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:05.788397+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:05 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 1245620,
+            "cursor": "AoJwwMGVy6EDdLOEkAc=",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-1245620-0001.json",
+          "row_count": 100,
+          "sha256": "40fc8addd7386f4415b1349926abf4fc306a04bd9c68814a516d6f10c3a7a90d"
+        }
+      ],
+      "rows": 200,
+      "stop_reason": "limit"
+    },
+    "413150": {
+      "done": true,
+      "next_cursor": "AoJ4+t/Px6EDcuPIjwc=",
+      "pages": [
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:00.768779+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:00 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 413150,
+            "cursor": "*",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-413150-0000.json",
+          "row_count": 100,
+          "sha256": "0f5a92709b07b1ec602daee1e90fdf30c40feabca33f2b429b77f7cb30570f6a"
+        },
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:03:01.764539+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:03:01 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 413150,
+            "cursor": "AoJws9bHy6EDeteLkAc=",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-413150-0001.json",
+          "row_count": 100,
+          "sha256": "03681aa2b2cbf3653cb8295b6ac1db210858ab9b213a0a5dfb5193ddbcd05f3a"
+        }
+      ],
+      "rows": 200,
+      "stop_reason": "limit"
+    },
+    "570": {
+      "done": true,
+      "next_cursor": "AoJ4oLSLyqEDccWMvQE=",
+      "pages": [
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:02:59.020634+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:02:58 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 570,
+            "cursor": "*",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-570-0000.json",
+          "row_count": 100,
+          "sha256": "59b650fe3cdefa73d6d58871906662d9298fa3896698b569313fe3eeeeb1534f"
+        },
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:02:59.776400+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:02:59 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 570,
+            "cursor": "AoJwjaufzKEDcZvXnwI=",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-570-0001.json",
+          "row_count": 100,
+          "sha256": "b50b6bc77da32111dc796e8998aa602a4da978ab3b4b242f01e6a2576028a3dd"
+        }
+      ],
+      "rows": 200,
+      "stop_reason": "limit"
+    },
+    "730": {
+      "done": true,
+      "next_cursor": "AoJwxvbQzaEDePih1AM=",
+      "pages": [
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:02:56.855026+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:02:56 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 730,
+            "cursor": "*",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-730-0000.json",
+          "row_count": 100,
+          "sha256": "a879560fa31399467475e2f68681bfc8c875bcc0b616f31c1fa8cc7794acf589"
+        },
+        {
+          "attempts": 1,
+          "endpoint": "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+          "fetched_at": "2026-11-02T16:02:57.759107+00:00",
+          "headers": {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Date": "Mon, 02 Nov 2026 16:02:57 GMT"
+          },
+          "http_status": 200,
+          "parameters": {
+            "appid": 730,
+            "cursor": "AoJ4htGUzqEDeMygtwE=",
+            "filter": 2,
+            "languages": [
+              "english"
+            ],
+            "num_per_page": 100,
+            "purchase_type": 1,
+            "review_type": 0
+          },
+          "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/reviews-730-0001.json",
+          "row_count": 100,
+          "sha256": "0dc0ceed8c5c33dfe84e735771d4cbd66484b1241202b4330405698fd1ff3077"
+        }
+      ],
+      "rows": 200,
+      "stop_reason": "limit"
+    }
+  },
+  "base_run_id": "airflow-91c6d7d9546c52838f2bda54804c2f2a",
+  "catalog": {
+    "attempts": 1,
+    "endpoint": "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+    "fetched_at": "2026-11-02T16:02:55.983789+00:00",
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8",
+      "Date": "Mon, 02 Nov 2026 16:02:55 GMT"
+    },
+    "http_status": 200,
+    "parameters": {
+      "context": {
+        "country_code": "US",
+        "language": "english"
+      },
+      "data_request": {
+        "include_all_purchase_options": true,
+        "include_basic_info": true,
+        "include_release": true,
+        "include_tag_count": 20
+      },
+      "ids": [
+        {
+          "appid": 730
+        },
+        {
+          "appid": 570
+        },
+        {
+          "appid": 413150
+        },
+        {
+          "appid": 1091500
+        },
+        {
+          "appid": 1245620
+        }
+      ]
+    },
+    "path": "bronze/api/airflow-20b0805d5b87563f95c250b98419665c/catalog.json",
+    "sha256": "0dd7cca628a9d160a6cb07ac2c42cf22ee0fd0ea056b05a5a457ebf7092d8c67"
+  },
+  "checks": {
+    "binary_feedback_preserved": true,
+    "bronze_checksums": true,
+    "collection_complete": true,
+    "gold_reconciliation": true,
+    "nonempty_reviews": true,
+    "one_feedback_per_review": true,
+    "requested_games_available": true,
+    "review_reconciliation": true,
+    "unique_review_ids": true,
+    "valid_item_references": true,
+    "valid_utc_timestamps": true
+  },
+  "collected_at": "2026-11-02T16:03:05.840719+00:00",
+  "collection_complete": true,
+  "config": {
+    "app_ids": [
+      730,
+      570,
+      413150,
+      1091500,
+      1245620
+    ],
+    "country_code": "US",
+    "currency": "USD",
+    "language": "english",
+    "max_attempts": 3,
+    "max_reviews_per_game": 200,
+    "page_size": 100,
+    "request_interval_seconds": 1.0,
+    "timeout_seconds": 30
+  },
+  "counts": {
+    "catalog_rows_observed": 5,
+    "changed_review_versions": 3,
+    "duplicate_review_rows": 0,
+    "empty_review_text": 7,
+    "games_in_snapshot": 5,
+    "new_review_ids": 257,
+    "rejected_games": 0,
+    "rejected_reviews": 0,
+    "review_rows_observed": 1000,
+    "reviews_in_snapshot": 1257,
+    "unique_reviews_in_poll": 1000
+  },
+  "coverage": "bounded_latest_updates",
+  "new_events_enqueued": 260,
+  "run_id": "airflow-20b0805d5b87563f95c250b98419665c",
+  "source": "steam_api",
+  "started_at": "2026-11-02T16:02:55.407822+00:00",
+  "status": "completed",
+  "verified_at": "2026-11-02T16:03:09.941265+00:00"
+}

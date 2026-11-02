@@ -8,3 +8,4 @@ logs/
 .env
 reports/runtime/
 .pytest_cache/
+.ruff_cache/

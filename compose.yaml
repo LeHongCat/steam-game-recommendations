@@ -71,6 +71,16 @@ services:
       - airflow-state:/opt/airflow
       - .:/opt/airflow/project
     mem_limit: 4g
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; h=json.load(urllib.request.urlopen('http://localhost:8080/api/v2/monitor/health',timeout=5)); assert all(h[k]['status']=='healthy' for k in ('metadatabase','scheduler','dag_processor'))"
+      interval: 10s
+      timeout: 10s
+      start_period: 60s
+      retries: 12
 
   worker:
     <<: *pipeline
