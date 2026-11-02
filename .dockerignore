@@ -1,0 +1,8 @@
+.git
+data
+.planning
+.runtime
+.wheels
+.venv
+reports/runtime
+__pycache__

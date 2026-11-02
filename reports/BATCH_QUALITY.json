@@ -1,0 +1,26 @@
+{
+  "snapshot_id": "ea77ea508512995a",
+  "checks": {
+    "nonempty_games": true,
+    "nonempty_reviews": true,
+    "unique_review_ids": true,
+    "valid_item_references": true,
+    "game_reconciliation": true,
+    "one_feedback_per_review": true,
+    "review_reconciliation": true,
+    "gold_reconciliation": true,
+    "binary_feedback_preserved": true
+  },
+  "counts": {
+    "games": 32131,
+    "games_scanned": 32135,
+    "game_duplicates_collapsed": 1,
+    "reviews_scanned": 5000,
+    "reviews": 4517,
+    "interactions": 4517,
+    "duplicates_collapsed": 27,
+    "rejected_reviews": 456,
+    "rejected_games": 3,
+    "missing_review_time": 1005
+  }
+}

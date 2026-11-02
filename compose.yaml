@@ -1,0 +1,80 @@
+name: steam-recsys-demo
+
+x-pipeline: &pipeline
+  image: steam-recsys-demo:local
+  build: .
+  environment: &pipeline-env
+    PIPELINE_ROOT: /opt/airflow/project
+    PYTHONPATH: /opt/airflow/project
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  volumes:
+    - .:/opt/airflow/project
+
+services:
+  kafka-init:
+    image: apache/kafka:4.3.1
+    user: "0:0"
+    entrypoint: [chown]
+    command: ["1000:1000", /data]
+    volumes:
+      - kafka-data:/data
+
+  kafka:
+    image: apache/kafka:4.3.1
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:19092:19092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: [CMD-SHELL, /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    mem_limit: 1g
+
+  airflow:
+    <<: *pipeline
+    command: standalone
+    ports:
+      - "127.0.0.1:18080:8080"
+    environment:
+      <<: *pipeline-env
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__PARALLELISM: 2
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+    volumes:
+      - airflow-state:/opt/airflow
+      - .:/opt/airflow/project
+    mem_limit: 4g
+
+  worker:
+    <<: *pipeline
+    profiles: [tools]
+    entrypoint: [python, -m, src.pipeline]
+    mem_limit: 2g
+
+volumes:
+  kafka-data:
+  airflow-state:

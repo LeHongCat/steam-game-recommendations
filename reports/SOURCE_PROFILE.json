@@ -1,0 +1,14 @@
+{
+  "source_review_file": "australian_user_reviews.json.gz",
+  "source_game_file": "steam_games.json.gz",
+  "raw_user_objects": 25799,
+  "raw_reviews": 59305,
+  "raw_game_objects": 32135,
+  "usable_catalog_ids": 32131,
+  "demo_reviews_scanned": 5000,
+  "demo_reviews_with_catalog_item": 4544,
+  "demo_feedback": {
+    "True": 4360,
+    "False": 640
+  }
+}
