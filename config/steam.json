@@ -1,0 +1,11 @@
+{
+  "app_ids": [730, 570, 413150, 1091500, 1245620],
+  "language": "english",
+  "country_code": "US",
+  "currency": "USD",
+  "max_reviews_per_game": 200,
+  "page_size": 100,
+  "request_interval_seconds": 1.0,
+  "timeout_seconds": 30,
+  "max_attempts": 3
+}

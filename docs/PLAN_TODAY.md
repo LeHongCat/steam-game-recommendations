@@ -1,155 +1,81 @@
-# Kế hoạch triển khai Steam Game Recommendation trong một ngày
+# Kế hoạch Steam Game Recommendation từ Steam API
 
-Phạm vi phụ trách là ba tầng đầu trong `Architect.docx`: Data Sources, Ingestion & Streaming và Storage. Đầu ra cần đủ rõ và sạch để nhóm Processing có thể chạy ABSA, tạo đặc trưng và huấn luyện recommendation ở bước tiếp theo.
+Mục tiêu của ba phần đầu là lấy dữ liệu trực tiếp từ Steam, đưa qua batch và Kafka, lưu được nguồn gốc và dữ liệu sạch để bàn giao cho nhóm Processing. Ưu tiên một luồng nhỏ chạy được trong ngày; chưa đánh giá chất lượng recommendation.
 
-Mục tiêu hôm nay là chứng minh dữ liệu Steam thật đi được từ nguồn đến các bảng lưu trữ, có chạy batch bằng Airflow, truyền sự kiện qua Kafka, kiểm tra chất lượng và chạy lại có kiểm soát. Đây là demo kỹ thuật cho môn học; kết quả này chưa chứng minh chất lượng gợi ý game.
+## Phần 1 Data Sources
 
-## Phạm vi và lựa chọn công nghệ
+Nguồn chính là hai endpoint trên `https://api.steampowered.com`, không cần dataset tải sẵn:
 
-| Thành phần | Chọn cho hôm nay | Vai trò |
+| API | Phạm vi | Dữ liệu |
 |---|---|---|
-| Ngôn ngữ | Python | Download, chuẩn hóa và kiểm tra dữ liệu |
-| Batch orchestration | Apache Airflow standalone | DAG 4 task, dependency, retry và log |
-| Streaming | Apache Kafka một broker KRaft | Producer, topic, consumer group và offset |
-| File lưu trữ | Gzip gốc, JSON và Parquet | Bronze bất biến theo checksum; Silver chuẩn hóa; Gold thống kê |
-| Run metadata | Manifest JSON và SQLite | Nguồn, checksum, snapshot, số dòng, trạng thái |
-| Triển khai | Docker Compose | Cùng môi trường chạy và một project riêng |
+| IStoreBrowseService/GetItems/v1 | Danh sách App ID cấu hình | Tên, mô tả, developer/publisher, tag/category ID, free flag, lựa chọn mua và giá |
+| IUserReviewsService/GetAppReviews/v1 | Reviews theo App ID, cursor | Review ID, tác giả, text, recommend, ngôn ngữ, created/updated time, playtime và cờ nguồn |
 
-Kafka và Airflow là hai công nghệ được chọn để đáp ứng định hướng môn học. Chưa cần Spark/Hadoop cho mẫu dữ liệu hôm nay. Nếu giảng viên bắt buộc một trong hai công nghệ đó, thay bước Silver bằng Spark local, giữ nguyên contract dữ liệu và tiêu chí nghiệm thu.
+Chọn 5 game từ nhiều kiểu trải nghiệm: CS2, Dota 2, Stardew Valley, Cyberpunk 2077 và ELDEN RING. App ID là watchlist đầu vào; metadata và review đều được lấy từ API khi chạy, không hardcode tên hoặc nội dung review vào kết quả.
 
-Storage hôm nay dùng filesystem local có bind mount. Đây là Data Lake demo, chưa có object storage hay table format ACID. Tài liệu gốc gợi ý MinIO, nhưng repository community hiện đã archive; khi cần S3 local có thể khảo sát SeaweedFS. [MinIO](https://github.com/minio/minio), [SeaweedFS](https://github.com/seaweedfs/seaweedfs).
+Mặc định tiếng Anh, tối đa 200 review/game/poll, 100 review/trang, sort Updated. Context giá US/USD được cấu hình rõ. API catalog trả tag/category ID; không tự đặt tên genre cho các ID đó. API review dùng `recommendationid` thật thay cho khóa tự sinh từ ngày đăng.
 
-## Sơ đồ luồng dữ liệu
+Không thu thập click, wishlist, giỏ hàng hoặc giao dịch mua. `steam_purchase` là cờ trên review, không phải log purchase có thời điểm giao dịch. Các giá trị playtime cũng là quan sát do review API trả về, không phải session log.
+
+**Đầu ra và nghiệm thu:** raw JSON trực tiếp từ Steam, request metadata, checksum, schema mapping và số lượng thực tế theo từng game. API key không được yêu cầu trong cấu hình demo. [Tài liệu review](https://partner.steamgames.com/doc/webapi/IUserReviewsService).
+
+## Phần 2 Ingestion và Streaming
 
 ```mermaid
 flowchart LR
-    R[UCSD Steam reviews V1] --> A[Airflow ingest_sources]
-    G[UCSD Steam catalog V2] --> A
-    A --> B[Bronze gzip gốc và manifest]
-    B --> S[Silver games reviews interactions]
-    S --> T[Gold game_statistics]
-    T --> Q[Quality gate và latest snapshot]
-    S --> P[Replay producer]
-    P --> K[Kafka review-feedback topic]
-    K --> C[Consumer commit sau lưu bền vững]
-    C --> E[Bronze events theo partition và offset]
-    C --> X[Quarantine nếu sai schema]
-    E --> D[Silver stream dedup theo event_id]
-    S --> H[Bàn giao Processing và ABSA]
+  A[Steam APIs] --> B[Airflow crawl]
+  B --> C[Bronze raw JSON và cursor]
+  C --> D[Silver normalize và upsert]
+  D --> E[Gold thống kê và quality gate]
+  E --> F[SQLite review state và outbox]
+  F --> G[Kafka review_upsert]
+  G --> H[Consumer lưu receipt rồi commit]
+  H --> I[Bronze Kafka]
+  I --> J[Silver stream versions và latest]
 ```
 
-### Phần 1 Data Sources
+DAG `steam_api_batch` chạy mỗi giờ, `catchup=False`, một active run và retry một lần. Task `crawl_steam` dùng run ID ổn định của DAG; retry cùng run tiếp tục các page chưa hoàn tất. Những lần poll mới luôn bắt đầu cursor đầu tiên để quan sát các review được cập nhật gần đây.
 
-Nguồn chính là bộ Steam của UCSD. Chọn V1 reviews vì có định danh người dùng trong dataset, nội dung review và cờ `recommend`; ghép thông tin game từ catalog V2 bằng Steam App ID. Đây là lựa chọn hai file cụ thể, không gộp định danh người dùng giữa các phiên bản dataset. [Nguồn UCSD và tài liệu trích dẫn](https://cseweb.ucsd.edu/~jmcauley/datasets.html#steam_data).
+HTTP client giới hạn khoảng một request/giây, timeout 30 giây, retry tối đa ba lần với backoff cho lỗi kết nối/5xx và xử lý Retry-After khi gặp 429. Mỗi page lưu raw và metadata trước khi cập nhật cursor; không cần crawl lại toàn bộ run khi mất kết nối ở page sau.
 
-| File | Nội dung dùng | Đích |
+Silver giữ review ID duy nhất, chọn bản có updated time mới hơn, rồi hợp nhất với snapshot thành công trước đó. Quality gate kiểm tra checksum, foreign key, số lượng, UTC timestamps và thống kê positive/negative trước khi tạo event.
+
+Trong cùng một SQLite transaction, quality task cập nhật accepted review revision và hàng đợi outbox. Publisher gửi topic `steam.reviews.upserts.v2`, key là review ID, ACK all và chỉ đánh dấu sent sau ACK. Lần crawl đầu phát upsert cho những review hệ thống lần đầu quan sát; những lần poll sau không phát lại review không đổi.
+
+Consumer group `steam-api-bronze-v2` chỉ commit Kafka offset sau khi lưu receipt hoặc quarantine. Raw receipt giữ partition/offset; Silver có bảng version và latest theo review ID. Broker ACK trước khi outbox ghi sent vẫn có thể tạo duplicate delivery sau crash; event ID ổn định giúp consumer loại trùng.
+
+**Đầu ra và nghiệm thu:** DAG dùng API thật chạy thành công; dữ liệu mới qua Kafka; poll lặp không tăng event cho review không đổi; test cập nhật review tạo thêm đúng một version; lỗi publish giữ event chờ gửi lại.
+
+## Phần 3 Storage
+
+| Tầng | Dữ liệu | Quy tắc |
 |---|---|---|
-| `australian_user_reviews.json.gz` | user_id, reviews.item_id, review, recommend, posted | reviews và interaction được suy ra từ review |
-| `steam_games.json.gz` | id, title/app_name, genres, tags, developer, publisher, price | games |
+| Bronze API | Raw HTTP JSON, metadata request, checksum | Giữ nguyên byte; phân theo run |
+| Silver batch | Games, reviews, feedback từ review | App ID/review ID đúng kiểu; review upsert; UTC timestamp |
+| Gold | Review counts và positive ratio theo game | Thống kê mô tả của snapshot |
+| Bronze Kafka | Envelope + partition/offset + ingest time | Lưu trước commit offset |
+| Silver stream | Review versions và latest review | Dedup logical event, giữ phiên bản cập nhật |
+| Metadata | Manifest + SQLite | Cursor, lineage, accepted revision, outbox và run status |
 
-Quy mô demo mặc định: đọc tối đa 5.000 review nguồn và catalog. Mẫu là các dòng đầu tiên theo thứ tự file, nên chỉ dùng kiểm chứng pipeline; không dùng để kết luận chất lượng recommendation. Có thể chạy toàn bộ reviews V1 bằng `--limit 0` sau khi demo đạt.
+Filesystem và Parquet đủ cho demo. Chưa có transaction/time travel của Iceberg; `latest.json` là điểm chọn snapshot đã qua kiểm tra. Toàn bộ dữ liệu được đặt trong `data/steam_api/` và dùng định danh Steam nhất quán.
 
-Các việc cần làm:
+Làm sạch cụ thể: chuẩn hóa Unicode/newline, bỏ ký tự điều khiển lỗi, trim; HTML mô tả game sang plain text; chuyển Unix timestamps thành Arrow timestamp UTC; ID thành string; thiếu playtime giữ null; giữ recommended=false; review rỗng giữ nhưng không đưa vào ABSA. Giá free-to-play là 0, không lấy giá gói nâng cấp làm giá game miễn phí.
 
-1. Tải file, giữ nguyên gzip gốc, ghi URL, SHA-256 và thời điểm ingest.
-2. Đọc thử schema thực tế. Các file này có dòng dạng Python dict literal, nên dùng `ast.literal_eval`, không dùng `eval`.
-3. Chuẩn hóa App ID thành string; hash user key và đặt namespace `ucsd_v1`.
-4. Ghi `recommended` là boolean. Không quy đổi thành rating 1–5, không coi mọi review là tín hiệu tích cực.
-5. Giữ nguyên review âm và các review thiếu thời gian. Thiếu năm không được tự đoán năm; đánh dấu thời gian chưa biết.
+Gold hôm nay chưa có ABSA/profile hoặc ma trận huấn luyện. Nhóm Processing sẽ bổ sung những bảng đó theo `DATA_CONTRACT.md`. Lifetime playtime, vote và giá là dữ liệu ở thời điểm crawl, không tự coi là giá trị lịch sử tại thời điểm review.
 
-Không có click/view/wishlist thật trong hai file được chọn. Demo streaming replay feedback thật có sẵn, luôn có `source_mode=replay`; không tạo nhận định đây là hành vi mới trên Steam.
+**Đầu ra và nghiệm thu:** raw đối chiếu được với Silver; số lượng có giải thích; không duplicate review ID; có quarantine và lý do; giữ được snapshot trước và lineage đến page nguồn.
 
-API Steam là phần mở rộng sau demo: polling review mới cho danh sách App ID hữu hạn, có cursor/checkpoint và retry. Tài liệu hiện dùng `IUserReviewsService/GetAppReviews`, thay cho endpoint `/appreviews` cũ. API này không phải nguồn push event trực tiếp. [Steamworks](https://partner.steamgames.com/doc/webapi/IUserReviewsService).
+## Lịch thực hiện trong ngày
 
-**Nghiệm thu phần 1:** có hai file nguồn, schema mapping, nguồn trích dẫn và báo cáo tỷ lệ join/null/thời gian thiếu; không trộn user identity hoặc bịa dữ liệu thiếu.
-
-### Phần 2 Ingestion và Streaming
-
-Luồng batch qua DAG `steam_batch`:
-
-```text
-ingest_sources → silver → gold → quality_gate
-```
-
-`ingest_sources` tải hoặc dùng cache, lưu Bronze theo checksum và sinh snapshot ID. `silver` làm phẳng reviews, chuẩn hóa khóa và dữ liệu, gom bản trùng, đưa bản ghi không hợp lệ vào quarantine. `gold` sinh thống kê game. `quality_gate` đối chiếu số lượng và khóa, kiểm checksum rồi mới xuất `latest.json`.
-
-DAG có lịch `@daily`, `catchup=False`, một run hoạt động cùng lúc, retry một lần. Trong hôm nay trigger thủ công và chụp một run thành công. Đây là ingest lại snapshot tĩnh có kiểm soát, chưa phải incremental API ingestion.
-
-Luồng Kafka có một topic `steam.review-feedback.v1`, một partition, replication factor 1 và retention 24 giờ. Dùng cấu hình này để tiết kiệm tài nguyên cho demo, không tuyên bố có high availability.
-
-1. Đọc 200 review đã sạch từ snapshot hoàn tất.
-2. Producer tạo event ID ổn định từ review ID và gửi Kafka với `acks=all`.
-3. Consumer validate contract, lưu raw envelope theo `(topic, partition, offset)` vào Bronze.
-4. Consumer chỉ commit offset sau khi lưu toàn bộ batch vào Bronze hoặc quarantine. Crash trước commit có thể đọc lại; ghi cùng offset không làm mất lịch sử nguồn.
-5. Export Bronze event thành Parquet, loại trùng theo logical `event_id`.
-6. Phát lại cùng 200 event: Bronze có thêm receipt, Silver vẫn có 200 logical event.
-
-`event_time` là thời điểm lịch sử trong review; `produced_at` là lúc replay; `ingested_at` là lúc consumer nhận và lưu. Không dùng chênh lệch `ingested_at - event_time` làm độ trễ streaming vì dữ liệu lịch sử đã cũ.
-
-Contract JSON nằm trong `contracts/`. Bản demo dùng validation trong code và `schema_version=1`; chưa triển khai service Schema Registry riêng.
-
-**Nghiệm thu phần 2:** một DAG thật chạy thành công; 200 event qua broker thật và được lưu; replay không tăng số logical event; restart consumer tiếp tục theo committed offset; payload sai bị quarantine.
-
-### Phần 3 Storage
-
-```text
-data/
-  downloads/                         cache file nguồn
-  bronze/files/<sha256>/             gzip gốc
-  bronze/events/<topic>/<partition>/ receipt theo Kafka offset
-  silver/<snapshot_id>/              games reviews interactions Parquet
-  silver/stream/                     event Parquet sau dedup
-  gold/<snapshot_id>/                game_statistics Parquet
-  manifests/<snapshot_id>.json       lineage config checksum row counts
-  quarantine/                       dữ liệu lỗi và lý do
-  metadata.sqlite                   run metadata
-  latest.json                       snapshot đã qua quality gate
-```
-
-| Bảng | Một dòng đại diện | Khóa | Mục đích |
-|---|---|---|---|
-| Silver games | Một game | item_id | Content metadata cho bước sau |
-| Silver reviews | Một review trong nguồn | review_id suy ra ổn định | Review text cho ABSA và feedback |
-| Silver interactions | Một feedback từ review | event_id bằng source review ID | Tín hiệu user–item có provenance |
-| Silver stream feedback | Một logical replay event | event_id UUID | Kiểm chứng consumer và dedup |
-| Gold game_statistics | Thống kê của game trong snapshot | snapshot_id, item_id | Đối chiếu số dòng và demo truy vấn |
-
-Gold hôm nay chỉ là thống kê mô tả của mẫu review. User/item aspect profile và feature ABSA thuộc phần 4; nhóm phụ trách phần đó sẽ ghi thêm Gold dựa trên contract bàn giao. Không coi `game_statistics` là feature đã bảo đảm point-in-time correctness cho huấn luyện.
-
-Chưa partition theo user hoặc item để tránh quá nhiều file nhỏ. Khi tăng quy mô có thể partition theo ngày ingest/event nếu thực sự hữu ích, compact các event file và chuyển sang Iceberg. Snapshot/manifest hiện tại không cung cấp transaction hoặc time travel của Iceberg.
-
-**Nghiệm thu phần 3:** giữ được nguồn gốc; đọc được Parquet; khóa duy nhất; không còn orphan item trong bảng sạch; chạy lại không nhân số logical record; phân biệt file dữ liệu với metadata quản lý run.
-
-## Lịch làm việc trong ngày
-
-Ước lượng dưới đây là thời lượng làm việc, không phải cam kết giờ đồng hồ. Pull image và tốc độ mạng có thể chi phối phần dựng môi trường.
-
-| Khung | Việc làm | Đầu ra phải có |
+| Thời lượng dự kiến | Công việc | Đầu ra |
 |---|---|---|
-| 0–45 phút | Chốt schema, tải và profile hai file | Source mapping và Bronze gốc |
-| 45–120 phút | Script batch, Silver, quarantine và manifest | Chạy end-to-end được bằng CLI |
-| 120–180 phút | Docker và Airflow DAG | DAG 4 task thành công |
-| 180–240 phút | Kafka topic, producer, consumer, export | 200 event được lưu thành Parquet |
-| 240–300 phút | Replay, restart, malformed event và đối chiếu | Báo cáo chất lượng và recovery |
-| 300–360 phút | README, contract bàn giao và demo | Bộ source + bằng chứng để trình bày |
+| 30 phút | Kiểm tra endpoint, mạng và schema thật | Phản hồi live của catalog/review |
+| 60 phút | Crawler, pagination, retry và checkpoint | Bronze API và manifest |
+| 90 phút | Chuẩn hóa, upsert và quality gate | Silver/Gold + báo cáo |
+| 60 phút | Outbox, Kafka publisher và consumer | Review upsert đến Silver stream |
+| 30 phút | DAG và lịch poll | Airflow run thành công |
+| 30 phút | Kiểm chứng, tài liệu, bàn giao | Source và bằng chứng API thật |
 
-Nếu thiếu thời gian: giữ nguyên Kafka, Airflow và ba tầng storage; giảm số review và bỏ API live/object storage. Nếu môi trường Docker lỗi kéo dài, báo rõ giới hạn và giữ bản CLI để kiểm tra dữ liệu; không gọi CLI là bằng chứng Airflow/Kafka đã chạy.
+Giới hạn có chủ ý: đây là cửa sổ cập nhật gần nhất có trần số dòng, không phải full backfill. Khi một game có nhiều cập nhật hơn trần giữa hai lần poll, có thể bỏ sót. Muốn tăng độ phủ cần tăng limit/giảm chu kỳ hoặc crawl đến watermark với overlap và đo coverage. Demo không khẳng định có toàn bộ lịch sử hoặc phát hiện review đã xóa.
 
-## Kiểm tra và bằng chứng trình bày
-
-- Batch: source count = Silver count + duplicate count + rejected count.
-- Gold: tổng review_count bằng số review Silver; positive + negative bằng tổng.
-- Integrity: sửa một byte Bronze phải bị checksum gate phát hiện.
-- Idempotency: chạy lại cùng nguồn/config giữ cùng snapshot ID và một run metadata.
-- Streaming: produce 200, consume 200, export 200; replay và export vẫn 200.
-- Recovery: sau consumer commit, chạy lại không đọc lại các offset đã commit.
-- Bad payload: gửi event sai contract; consumer lưu quarantine thay vì ghi vào Silver.
-- Evidence: file báo cáo có số thực, lệnh chạy, phiên bản và trạng thái DAG; screenshot Airflow nếu cần nộp.
-
-## Bàn giao cho Processing
-
-`reviews.parquet` cung cấp review text, user/item key, nhãn recommended và chất lượng thời gian. `games.parquet` cung cấp tags/genres/title. `interactions.parquet` ghi rõ đây là feedback từ review, không phải log click hay mua hàng độc lập; tránh tính cùng tín hiệu hai lần khi hợp nhất dữ liệu.
-
-Những review không có năm được giữ cho xử lý văn bản nhưng phải loại khỏi bài toán yêu cầu temporal split hoặc có chiến lược riêng được báo cáo. Thời gian dạng ngày dùng UTC làm quy ước lưu trữ và có đánh dấu `day_assumed_utc`, không khẳng định timezone gốc của tác giả. Catalog là snapshot lịch sử riêng, không tự bảo đảm giá/metadata tại thời điểm review. Giá giữ ở `price_raw` cho đến khi xác nhận được currency.
-
-Sau khi phần 1–2–3 đạt: nhóm tiếp theo định nghĩa aspect game như gameplay, story, graphics, performance, controls, multiplayer và price/value, chạy ABSA rồi tạo feature/profile. Chưa triển khai thuật toán recommendation trong phần việc hôm nay.
+Tăng quy mô sau nghiệm thu: mở rộng watchlist và backfill, đo API quota, chuyển Spark vào bước chuẩn hóa nếu dữ liệu lớn, rồi cân nhắc object storage/Iceberg. Nguồn gốc và contract hiện tại vẫn giữ để nhóm sau nối tiếp được.

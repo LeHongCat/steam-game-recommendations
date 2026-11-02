@@ -1,89 +1,79 @@
-# Contract dữ liệu bàn giao
+# Contract Steam API v2
 
-Contract v1 mô tả dữ liệu mà ba tầng đầu cung cấp cho Processing. Các đường dẫn dưới đây tính từ thư mục project. Đọc `data/latest.json` để chọn snapshot đã vượt quality gate, sau đó lấy file theo ID đó. Dữ liệu không có thời gian hợp lệ vẫn được giữ, có trạng thái rõ ràng.
+Đọc `data/steam_api/latest.json` để lấy run đã qua quality gate. Mọi file Silver batch nằm trong `data/steam_api/silver/<run_id>/`. ID là string để tránh mất độ chính xác của SteamID/review ID 64 bit. Thời gian Silver là Arrow `timestamp[us, tz=UTC]`.
 
 ## Catalog game
 
-`data/silver/<snapshot_id>/games.parquet`, một dòng cho một `item_id`.
+`games.parquet`, một dòng cho mỗi Steam App ID.
 
-| Trường | Kiểu Arrow | Ý nghĩa |
+| Nhóm trường | Kiểu | Ý nghĩa |
 |---|---|---|
-| item_id | string | Steam App ID, bắt buộc và duy nhất |
-| title | string | title, fallback sang app_name |
-| genres | list string | Danh sách genres; thiếu là danh sách rỗng |
-| tags | list string | Danh sách tags; thiếu là danh sách rỗng |
-| developer | string nullable | Giữ giá trị nguồn |
-| publisher | string nullable | Giữ giá trị nguồn |
-| price_raw | string | Giá nguyên nghĩa nguồn; chưa khẳng định currency |
-| source | string | ucsd_steam_catalog_v2 |
+| item_id, title, description | string | App ID, tên, mô tả plain text |
+| developers, publishers | list string | Danh sách tên từ API |
+| tag_ids, category_ids | list int64 | Steam IDs; không tự quy đổi thành tên genre |
+| is_free | boolean | Free-to-play |
+| price_minor_units | int64 nullable | Giá trong đơn vị nhỏ của tiền tệ; 0 cho game miễn phí |
+| price_currency | string nullable | USD trong config US/USD của adapter |
+| price_currency_source | string nullable | request_context; không giả là field currency có trong response |
+| purchase_option_name, purchase_options_json | string nullable | Lựa chọn giá được chọn và các lựa chọn gốc |
+| country_code | string | Ngữ cảnh Store request |
+| observed_at | UTC timestamp | Thời điểm lấy catalog |
+| source | string | steam_api |
 
-Không dùng tên game làm khóa. Catalog lịch sử V2 không tự bảo đảm trạng thái bán, giá hay mô tả tại thời điểm từng review V1. Không giả định file này có description, ảnh hoặc nhãn loại game/DLC đầy đủ.
+Với game trả phí, dùng `best_purchase_option` khi có; thiếu thì giá null. Với game free-to-play, giữ giá 0 kể cả API có gói nâng cấp trả phí. Giá là quan sát lúc crawl, không bảo đảm giá tại ngày review.
 
-## Review
+## Reviews
 
-`data/silver/<snapshot_id>/reviews.parquet`, một dòng cho một review key trong nguồn.
+`reviews.parquet`, một dòng cho mỗi review ID thật của Steam. Snapshot hợp nhất các review đã quan sát, giữ bản có updated time mới hơn.
 
-| Trường | Kiểu Arrow | Ý nghĩa |
+| Trường | Kiểu | Quy tắc |
 |---|---|---|
-| review_id | string | Khóa sinh ổn định từ namespace, source user, item và posted_raw |
-| user_id | string | Namespace ucsd_v1 cộng SHA-256 source user key |
-| item_id | string | Khóa ngoại sang catalog |
-| review_text | string | Nội dung review đã trim, giữ cả review tiêu cực |
-| recommended | boolean | Nhãn recommend của nguồn, không phải rating sao |
-| event_time | string nullable | ISO 8601 có timezone theo quy ước lưu trữ |
-| timestamp_precision | string | day_assumed_utc hoặc unknown |
-| posted_raw | string | Thời gian text gốc để audit |
-| absa_eligible | boolean | Có review text không rỗng |
-| source | string | ucsd_steam_reviews_v1 |
+| review_id | string | recommendationid từ Steam, không sinh từ user/ngày |
+| user_id | string | steam: cộng SHA-256 SteamID tác giả |
+| item_id | string | App ID của review request, phải có trong catalog |
+| review_text | string | NFC Unicode, newline LF, bỏ ký tự điều khiển lỗi và trim |
+| recommended | boolean | voted_up, giữ cả false |
+| language | string | Phải khớp ngôn ngữ request, trừ cấu hình all |
+| created_at, updated_at | UTC timestamp | Từ Unix timestamp; updated >= created |
+| observed_at | UTC timestamp | Thời điểm lấy page nguồn |
+| playtime_at_review_minutes | int64 nullable | Playtime tại lúc viết review |
+| playtime_forever_minutes | int64 nullable | Lifetime playtime được API trả ở lúc crawl |
+| votes_up, votes_funny | int64 nullable | Vote quan sát lúc crawl |
+| steam_purchase, received_for_free, refunded | boolean nullable | Cờ từ API; không tạo purchase event |
+| absa_eligible | boolean | false nếu text rỗng; feedback vẫn được giữ |
+| source_page | string | Đường dẫn page Bronze để audit |
+| source | string | steam_api |
 
-Nếu nguồn không có review ID thì đây là khóa suy ra, không được gọi là Steam recommendation ID thật. Cùng user/item/ngày có thể bị gom theo quy tắc này; số bản bị gom được ghi trong manifest. Giữ Bronze để có thể thay quy tắc nhận dạng sau khi profile sâu hơn.
+Không xóa phủ định, emoji hoặc review âm. Không xóa stopwords/stemming trong tầng ingestion. ID/nhãn/ngôn ngữ/timestamp không hợp lệ được quarantine cùng page và vị trí dòng; thiếu optional playtime/vote/cờ giữ null. Không suy luận missing playtime thành 0.
 
-Ngày thiếu năm không được suy ra từ năm tải file hoặc năm hiện tại. Chỉ dùng dòng có `event_time` khi cần temporal split. Dữ liệu dạng ngày không cung cấp độ chính xác đến giờ/phút của sự kiện gốc.
+## Feedback suy ra từ review
 
-## Feedback từ review
+`interactions.parquet`: event_id=`review:<review_id>`, source_review_id, user_id, item_id, event_type=`review_positive` hoặc `review_negative`, event_time=created_at, source=`steam_api_review`.
 
-`data/silver/<snapshot_id>/interactions.parquet`, một dòng feedback cho mỗi review sạch.
+Đây là biểu diễn khác của cùng review, không phải hành vi độc lập. Không cộng hai lần khi đã dùng review; không biến mọi dòng thành positive interaction. Click, wishlist và giao dịch mua nằm ngoài nguồn hiện tại.
 
-| Trường | Kiểu Arrow | Ý nghĩa |
-|---|---|---|
-| event_id | string | Bằng source review ID trong demo |
-| user_id | string | Cùng namespace với reviews |
-| item_id | string | Cùng App ID với catalog |
-| event_type | string | review_positive hoặc review_negative |
-| event_time | string nullable | Theo review nguồn |
-| source_review_id | string | Lineage đến review |
-| source_mode | string | historical |
+## Kafka upsert
 
-Đây là một cách biểu diễn khác của cùng tín hiệu review. Không cộng như hai hành vi độc lập khi đã dùng reviews. Với implicit collaborative filtering, người phụ trách model cần định nghĩa rõ cách dùng positive và negative; không coi mọi dòng là positive.
+Topic `steam.reviews.upserts.v2`; contract máy đọc được trong `contracts/review-upsert-v2.schema.json`.
 
-## Kafka feedback replay
+- schema_version=2, event_type=review_upsert, source_mode=api_poll.
+- review_id và item_id khớp review payload; source_run_id liên kết manifest.
+- review chứa toàn bộ row đã chuẩn hóa, timestamp biểu diễn ISO 8601 trong JSON.
+- revision là SHA-256 của identity, text, recommended, language, created/updated và playtime-at-review. Votes, lifetime playtime và observed_at không làm thay đổi revision riêng.
+- event_id là UUID ổn định từ review ID và revision. Broker key là review ID.
+- emitted_at là lúc tạo outbox event, khác created_at/updated_at của Steam và ingested_at của Kafka consumer.
 
-Topic `steam.review-feedback.v1`; contract máy đọc được tại `contracts/review-feedback-v1.schema.json`. Bảng Silver stream ở `data/silver/stream/review_feedback.parquet` có cùng các trường payload.
+Lần đầu quan sát review tạo upsert dù review đó đã được đăng từ trước. Poll lại cùng phiên bản không tạo event mới. Khi review thay đổi, ID review giữ nguyên, revision và event ID thay đổi. Outbox và accepted version được commit cùng transaction; sent chỉ được đánh dấu sau broker ACK.
 
-| Trường | Kiểu | Ý nghĩa |
-|---|---|---|
-| schema_version | integer | 1 |
-| event_id | UUID string | Logical ID ổn định qua các lần replay |
-| review_id | string | Source review key |
-| user_id | string | Source namespace user key |
-| item_id | string | Steam App ID |
-| recommended | boolean | Feedback gốc |
-| event_time | ISO string hoặc null | Thời gian lịch sử |
-| produced_at | ISO string có timezone | Thời điểm phát replay |
-| source_mode | string | replay |
+`silver/stream/review_versions.parquet` giữ một dòng mỗi event ID. `reviews_latest.parquet` giữ một dòng mỗi review ID, chọn theo updated_at rồi observed_at. Raw Kafka receipt vẫn giữ topic/partition/offset; retry delivery có thể tạo thêm receipt mà không nhân logical version.
 
-Bronze Kafka bổ sung `topic`, `partition`, `offset`, `ingested_at` và giữ `payload`. Silver gom logical event trùng; Bronze giữ receipt của từng offset. Consumer group `steam-bronze-v1` commit sau khi lưu batch, cung cấp at-least-once receipt; không tuyên bố exactly-once end-to-end.
+## Gold và bàn giao ABSA
 
-## Gold mô tả
+`gold/<run_id>/game_statistics.parquet`: item_id, review_count, positive_count, negative_count, positive_ratio, run_id. Đây là thống kê toàn snapshot, không tự dùng làm feature lịch sử trong temporal split.
 
-`data/gold/<snapshot_id>/game_statistics.parquet` có `item_id`, `review_count`, `positive_count`, `negative_count`, `positive_ratio`, `snapshot_id`. Đây là kết quả tổng hợp toàn bộ review trong mẫu snapshot, chưa cắt theo thời điểm train. Không dùng làm feature quá khứ mà không tổng hợp lại theo cutoff.
+Nhóm Processing bổ sung sau, chưa có prediction trong demo:
 
-## Contract dành cho phần Processing bổ sung
+- absa_outputs: review_id, review_revision, item_id, aspect, opinion_term, sentiment, score, confidence nullable, model_version, source_run_id, processed_at.
+- user/item aspect profiles: user_id hoặc item_id, aspect, score, mention_count, feature_cutoff_time, source_run_id, model_version.
 
-Các bảng dưới đây là thiết kế bàn giao, chưa có prediction/model output trong bản demo:
-
-- `absa_outputs`: review_id, item_id, user_id, aspect, opinion_term, sentiment, sentiment_score, confidence nullable, model_version, processed_at, source_snapshot_id.
-- `item_aspect_profiles`: item_id, aspect, quality_score, mention_count, model_version, source_snapshot_id, feature_cutoff_time.
-- `user_aspect_profiles`: user_id, aspect, preference_score, importance nullable, mention_count, model_version, source_snapshot_id, feature_cutoff_time.
-
-Không điền sẵn neutral cho aspect chưa được nhắc đến; không dùng recommended để gán sentiment cho từng aspect. Người phụ trách Processing định nghĩa thang điểm, schema model và cutoff trước khi ghi các bảng này.
+Nên dùng review ID + revision để chỉ chạy lại ABSA cho review mới hoặc được chỉnh sửa. Không dùng recommended để gán sentiment cho từng aspect; không coi aspect không xuất hiện là neutral. Khi đánh giá theo thời gian, cần xét updated_at của phiên bản review và observed_at của metadata để tránh dùng thông tin tương lai.

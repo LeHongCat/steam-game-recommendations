@@ -1,0 +1,1 @@
+{"airflow": "3.3.2", "kafka_python": "2.3.3", "pyarrow": "19.0.1", "python": "3.12.14"}

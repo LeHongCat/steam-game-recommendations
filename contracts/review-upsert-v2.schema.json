@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Steam API review upsert",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "review_id", "item_id", "revision", "source_run_id", "source_mode", "emitted_at", "review"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "event_id": {"type": "string", "format": "uuid"},
+    "event_type": {"const": "review_upsert"},
+    "review_id": {"type": "string", "pattern": "^[0-9]+$"},
+    "item_id": {"type": "string", "pattern": "^[0-9]+$"},
+    "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source_run_id": {"type": "string", "minLength": 1},
+    "source_mode": {"const": "api_poll"},
+    "emitted_at": {"type": "string", "format": "date-time"},
+    "review": {
+      "type": "object",
+      "required": ["review_id", "user_id", "item_id", "review_text", "recommended", "language", "created_at", "updated_at", "observed_at", "playtime_at_review_minutes", "playtime_forever_minutes", "votes_up", "votes_funny", "steam_purchase", "received_for_free", "refunded", "absa_eligible", "source_page", "source"],
+      "properties": {
+        "review_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "user_id": {"type": "string", "pattern": "^steam:[a-f0-9]{64}$"},
+        "item_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "review_text": {"type": "string"},
+        "recommended": {"type": "boolean"},
+        "language": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "playtime_at_review_minutes": {"type": ["integer", "null"], "minimum": 0},
+        "playtime_forever_minutes": {"type": ["integer", "null"], "minimum": 0},
+        "votes_up": {"type": ["integer", "null"], "minimum": 0},
+        "votes_funny": {"type": ["integer", "null"], "minimum": 0},
+        "steam_purchase": {"type": ["boolean", "null"]},
+        "received_for_free": {"type": ["boolean", "null"]},
+        "refunded": {"type": ["boolean", "null"]},
+        "absa_eligible": {"type": "boolean"},
+        "source_page": {"type": "string", "minLength": 1},
+        "source": {"const": "steam_api"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
