@@ -24,6 +24,14 @@ Script dựng môi trường, chạy DAG, chờ consumer xử lý xong và kiể
 
 Lần chạy sau có thể dùng `.\scripts\demo.ps1 -SkipBuild`. Dừng các service bằng `docker compose down`; dữ liệu vẫn được giữ.
 
+## Dashboard demo
+
+```powershell
+docker compose up -d dashboard
+```
+
+Mở [localhost:18081](http://localhost:18081) và chọn lần chạy. Dashboard đọc tiến độ từng game, nhật ký các bước, throughput Kafka, consumer lag và kết quả đối chiếu batch với stream. Xem [cách thu thập 50 game × 1.000 review](docs/OPERATIONS.md#backfill-va-dashboard).
+
 ## Crawl những gì
 
 | Dữ liệu | Nội dung |
@@ -54,6 +62,8 @@ Review mới được quan sát hoặc thay đổi phiên bản sẽ tạo event
 | `src/pipeline.py` | Tạo Silver/Gold và kiểm tra chất lượng |
 | `src/events.py`, `src/state.py` | Review revision, event contract và outbox |
 | `src/streaming.py` | Kafka publisher, consumer và bảng stream |
+| `src/backfill.py` | Crawl theo lô, xuất Parquet theo mục tiêu và đo Kafka |
+| `src/dashboard.py`, `ui/` | Dashboard chỉ đọc từ checkpoint và báo cáo local |
 | `dags/steam_api_batch.py` | DAG chạy mỗi giờ |
 
 ## Tài liệu và kiểm tra
@@ -62,6 +72,7 @@ Review mới được quan sát hoặc thay đổi phiên bản sẽ tạo event
 - [Data contract](docs/DATA_CONTRACT.md): schema, khóa và ý nghĩa các trường.
 - [Vận hành](docs/OPERATIONS.md): cấu hình, chạy thủ công, test và xử lý lỗi.
 - [Báo cáo kiểm chứng](reports/VERIFICATION.md): snapshot có thời điểm ghi nhận, không phải trạng thái live.
+- [Kết quả backfill 50 game](reports/BACKFILL_50X1000.md): số dòng, thời gian từng bước và số đo Kafka từ lượt chạy thực tế.
 
 ```powershell
 docker compose run --rm --entrypoint python worker -m unittest discover -s tests -v

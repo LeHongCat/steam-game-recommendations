@@ -5,9 +5,11 @@ import base64
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from itertools import batched, chain
 
-from kafka import KafkaConsumer, KafkaProducer
+from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 from kafka.admin import KafkaAdminClient, NewTopic
 from kafka.errors import TopicAlreadyExistsError
 
@@ -17,6 +19,7 @@ from src.schemas import STREAM_SCHEMA
 
 TOPIC = "steam.reviews.upserts.v2"
 GROUP = "steam-api-bronze-v2"
+PUBLISH_BATCH_SIZE = 500
 
 
 def initialize(bootstrap):
@@ -39,12 +42,21 @@ def initialize(bootstrap):
 
 
 def publish(bootstrap, producer=None):
+    started = time.monotonic()
     with storage.database() as db:
         pending = db.execute(
             "SELECT event_id,payload_json FROM outbox WHERE sent_at IS NULL ORDER BY sequence"
         ).fetchall()
     if not pending:
-        result = {"published": 0, "pending": 0, "topic": TOPIC, "source_mode": "api_poll"}
+        result = {
+            "published": 0,
+            "pending_before": 0,
+            "pending": 0,
+            "duration_seconds": round(time.monotonic() - started, 3),
+            "events_per_second": 0.0,
+            "topic": TOPIC,
+            "source_mode": "api_poll",
+        }
         storage.atomic_json(storage.ROOT / "reports/runtime/api-publisher.json", result)
         return result
     owned = producer is None
@@ -54,35 +66,78 @@ def publish(bootstrap, producer=None):
             bootstrap_servers=bootstrap,
             acks="all",
             retries=3,
+            linger_ms=10,
             value_serializer=lambda value: storage.dumps(value).encode("utf-8"),
         )
     published = 0
     try:
         with storage.database() as db:
-            for event_id, raw in pending:
-                event = validate_event(json.loads(raw))
-                producer.send(TOPIC, key=event["review_id"].encode(), value=event).get(timeout=30)
-                # A crash after ACK can duplicate the same event ID; commit each delivery separately.
-                db.execute(
-                    "UPDATE outbox SET sent_at=? WHERE event_id=?",
-                    (storage.now().isoformat(), event_id),
+            for batch in batched(pending, PUBLISH_BATCH_SIZE):
+                deliveries = []
+                for _, raw in batch:
+                    event = validate_event(json.loads(raw))
+                    deliveries.append(
+                        producer.send(TOPIC, key=event["review_id"].encode(), value=event)
+                    )
+                for delivery in deliveries:
+                    delivery.get(timeout=30)
+                # An interrupted batch can replay the same event IDs after an ACK.
+                sent_at = storage.now().isoformat()
+                db.executemany(
+                    "UPDATE outbox SET sent_at=? WHERE event_id=? AND sent_at IS NULL",
+                    ((sent_at, event_id) for event_id, _ in batch),
                 )
                 db.commit()
-                published += 1
+                published += len(batch)
         producer.flush()
     finally:
         if owned:
             producer.close()
     with storage.database() as db:
         remaining = db.execute("SELECT COUNT(*) FROM outbox WHERE sent_at IS NULL").fetchone()[0]
+    duration = time.monotonic() - started
     result = {
         "published": published,
+        "pending_before": len(pending),
         "pending": remaining,
+        "duration_seconds": round(duration, 3),
+        "events_per_second": round(published / duration, 2),
         "topic": TOPIC,
         "source_mode": "api_poll",
     }
     storage.atomic_json(storage.ROOT / "reports/runtime/api-publisher.json", result)
     return result
+
+
+def consumer_lag(bootstrap):
+    consumer = KafkaConsumer(bootstrap_servers=bootstrap, group_id=GROUP, enable_auto_commit=False)
+    try:
+        partitions = consumer.partitions_for_topic(TOPIC)
+        if not partitions:
+            raise RuntimeError(f"Kafka topic missing: {TOPIC}")
+        keys = [TopicPartition(TOPIC, partition) for partition in sorted(partitions)]
+        first = consumer.beginning_offsets(keys)
+        end = consumer.end_offsets(keys)
+        offsets = []
+        for key in keys:
+            committed = consumer.committed(key)
+            offsets.append(
+                {
+                    "partition": key.partition,
+                    "beginning_offset": first[key],
+                    "end_offset": end[key],
+                    "committed_offset": committed,
+                    "lag": max(0, end[key] - max(first[key], committed or 0)),
+                }
+            )
+        return {
+            "topic": TOPIC,
+            "group": GROUP,
+            "lag": sum(row["lag"] for row in offsets),
+            "partitions": offsets,
+        }
+    finally:
+        consumer.close()
 
 
 def export_events():
@@ -131,7 +186,32 @@ def export_events():
     return result
 
 
-def consume(bootstrap, count=1000, timeout_seconds=45, continuous=False):
+def store_receipt(message):
+    coordinates = {"topic": message.topic, "partition": message.partition, "offset": message.offset}
+    relative = f"{message.topic}/{message.partition}/{message.offset}.json"
+    try:
+        event = validate_event(json.loads(message.value))
+    except (ValueError, TypeError, UnicodeDecodeError, KeyError) as error:
+        storage.atomic_json(
+            storage.DATA / "quarantine/kafka" / relative,
+            {
+                **coordinates,
+                "raw_base64": base64.b64encode(message.value or b"").decode(),
+                "error": str(error),
+            },
+        )
+        return False
+
+    path = storage.DATA / "bronze/kafka" / relative
+    if path.exists():
+        if storage.read_json(path)["payload"] != event:
+            raise ValueError("Bronze record differs for the same Kafka offset")
+    else:
+        storage.atomic_json(path, {**coordinates, "ingested_at": storage.now(), "payload": event})
+    return True
+
+
+def consume(bootstrap, count=1000, timeout_seconds=45, continuous=False, *, export=True):
     consumer = KafkaConsumer(
         TOPIC,
         bootstrap_servers=bootstrap,
@@ -143,58 +223,21 @@ def consume(bootstrap, count=1000, timeout_seconds=45, continuous=False):
     received = accepted = rejected = 0
     started = time.monotonic()
     try:
-        while continuous or (received < count and time.monotonic() - started < timeout_seconds):
-            batch = consumer.poll(
-                timeout_ms=1000, max_records=500 if continuous else min(500, count - received)
-            )
-            for messages in batch.values():
-                for message in messages:
-                    coordinates = {
-                        "topic": message.topic,
-                        "partition": message.partition,
-                        "offset": message.offset,
-                    }
-                    try:
-                        event = validate_event(json.loads(message.value))
-                    except (ValueError, TypeError, UnicodeDecodeError, KeyError) as error:
-                        path = (
-                            storage.DATA
-                            / "quarantine/kafka"
-                            / message.topic
-                            / str(message.partition)
-                            / f"{message.offset}.json"
-                        )
-                        storage.atomic_json(
-                            path,
-                            {
-                                **coordinates,
-                                "raw_base64": base64.b64encode(message.value or b"").decode(),
-                                "error": str(error),
-                            },
-                        )
-                        rejected += 1
-                    else:
-                        path = (
-                            storage.DATA
-                            / "bronze/kafka"
-                            / message.topic
-                            / str(message.partition)
-                            / f"{message.offset}.json"
-                        )
-                        if path.exists():
-                            if storage.read_json(path)["payload"] != event:
-                                raise ValueError("Bronze record differs for the same Kafka offset")
-                        else:
-                            storage.atomic_json(
-                                path,
-                                {**coordinates, "ingested_at": storage.now(), "payload": event},
-                            )
-                        accepted += 1
-                    received += 1
-            if batch:
+        with ThreadPoolExecutor(max_workers=8) as writers:
+            while continuous or (received < count and time.monotonic() - started < timeout_seconds):
+                batch = consumer.poll(
+                    timeout_ms=1000, max_records=500 if continuous else min(500, count - received)
+                )
+                if not batch:
+                    continue
+                results = list(writers.map(store_receipt, chain.from_iterable(batch.values())))
+                batch_accepted = sum(results)
+                accepted += batch_accepted
+                rejected += len(results) - batch_accepted
+                received += len(results)
                 consumer.commit()
-                export_events()
                 if continuous:
+                    export_events()
                     print(
                         storage.dumps(
                             {"received": received, "accepted": accepted, "quarantined": rejected}
@@ -205,11 +248,16 @@ def consume(bootstrap, count=1000, timeout_seconds=45, continuous=False):
         pass
     finally:
         consumer.close()
+    ingest_duration = time.monotonic() - started
+    if not continuous and accepted and export:
+        export_events()
     result = {
         "received": received,
         "accepted": accepted,
         "quarantined": rejected,
         "duration_seconds": round(time.monotonic() - started, 2),
+        "ingest_duration_seconds": round(ingest_duration, 3),
+        "events_per_second": round(received / ingest_duration, 2),
     }
     storage.atomic_json(storage.ROOT / "reports/runtime/api-consumer.json", result)
     return result

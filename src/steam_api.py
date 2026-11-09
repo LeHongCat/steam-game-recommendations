@@ -144,6 +144,31 @@ def store_response(run_id, name, raw, metadata):
     }
 
 
+def catalog_parameters(config, app_ids):
+    return {
+        "ids": [{"appid": app} for app in app_ids],
+        "context": {"language": config["language"], "country_code": config["country_code"]},
+        "data_request": {
+            "include_basic_info": True,
+            "include_release": True,
+            "include_all_purchase_options": True,
+            "include_tag_count": 20,
+        },
+    }
+
+
+def review_parameters(config, app_id, cursor, size):
+    return {
+        "appid": app_id,
+        "filter": 2,
+        "languages": [config["language"]],
+        "review_type": 0,
+        "purchase_type": 1,
+        "cursor": cursor,
+        "num_per_page": size,
+    }
+
+
 def crawl(config_path=None, run_id=None, client=None):
     config = load_config(config_path)
     run_id = (
@@ -179,34 +204,15 @@ def crawl(config_path=None, run_id=None, client=None):
         storage.save_manifest(info)
     client = client or SteamClient(config)
     if info["catalog"] is None:
-        parameters = {
-            "ids": [{"appid": app} for app in config["app_ids"]],
-            "context": {"language": config["language"], "country_code": config["country_code"]},
-            "data_request": {
-                "include_basic_info": True,
-                "include_release": True,
-                "include_all_purchase_options": True,
-                "include_tag_count": 20,
-            },
-        }
-        raw, metadata = client.get(CATALOG_URL, parameters)
+        raw, metadata = client.get(CATALOG_URL, catalog_parameters(config, config["app_ids"]))
         if not isinstance(json.loads(raw)["response"].get("store_items"), list):
             raise ValueError("Catalog API did not return store_items")
         info["catalog"] = store_response(run_id, "catalog.json", raw, metadata)
         storage.save_manifest(info)
     for app, progress in info["apps"].items():
         while not progress["done"]:
-            parameters = {
-                "appid": int(app),
-                "filter": 2,
-                "languages": [config["language"]],
-                "review_type": 0,
-                "purchase_type": 1,
-                "cursor": progress["next_cursor"],
-                "num_per_page": min(
-                    config["page_size"], config["max_reviews_per_game"] - progress["rows"]
-                ),
-            }
+            size = min(config["page_size"], config["max_reviews_per_game"] - progress["rows"])
+            parameters = review_parameters(config, int(app), progress["next_cursor"], size)
             raw, metadata = client.get(REVIEWS_URL, parameters)
             body = json.loads(raw)["response"]
             if not isinstance(body.get("reviews"), list):

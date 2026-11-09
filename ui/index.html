@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101726">
+  <title>Steam Review Pipeline</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="frame brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+          <path d="M12 3 3 8l9 5 9-5-9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/>
+        </svg>
+      </span>
+      <span>Steam Review Pipeline</span>
+      <span id="connection" class="connection">Đang kết nối</span>
+    </div>
+  </header>
+
+  <main class="frame">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">STEAM API <span>→</span> PARQUET <span>→</span> KAFKA</p>
+        <h1 id="page-title">Tiến độ thu thập review</h1>
+        <p id="run-caption" class="muted">Theo dõi dữ liệu, luồng Kafka và kết quả kiểm tra của từng lần chạy.</p>
+      </div>
+      <div class="run-picker">
+        <label for="run">Lần chạy</label>
+        <select id="run" aria-label="Chọn lần chạy"><option value="">Chờ dữ liệu</option></select>
+      </div>
+    </section>
+
+    <div id="notice" class="notice" role="status" hidden></div>
+    <div id="results" hidden>
+      <section class="metrics" aria-label="Tổng quan lần chạy">
+        <article class="metric"><p>Review từ API</p><strong id="raw">—</strong><span id="pages">—</span></article>
+        <article class="metric"><p>Review trong bộ dữ liệu</p><strong id="exported">—</strong><span id="target">—</span></article>
+        <article class="metric"><p>Event Kafka đã ACK</p><strong id="published">—</strong><span id="publish-rate">—</span></article>
+        <article class="metric"><p>Consumer lag</p><strong id="lag">—</strong><span id="lag-detail">—</span></article>
+      </section>
+
+      <div class="columns">
+        <section class="panel games" aria-labelledby="games-heading">
+          <div class="section-title"><div><p class="eyebrow">STEAM API</p><h2 id="games-heading">Theo từng game</h2></div><span id="game-count" class="pill">—</span></div>
+          <p id="game-description" class="muted"></p>
+          <label id="game-search-box" class="game-search" hidden>
+            <span>Tìm game theo tên hoặc App ID</span>
+            <input id="game-search" type="search" placeholder="Ví dụ Portal hoặc 620">
+          </label>
+          <div id="game-list" class="game-list"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="steps-heading">
+          <div class="section-title"><div><p class="eyebrow">PIPELINE</p><h2 id="steps-heading">Các bước xử lý</h2></div><span id="phase" class="pill">—</span></div>
+          <ol id="steps" class="steps"></ol>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section class="panel" aria-labelledby="kafka-heading">
+          <div class="section-title"><div><p class="eyebrow">STREAMING</p><h2 id="kafka-heading">Hiệu năng Kafka</h2></div><span class="pill">Kafka</span></div>
+          <p id="topic" class="technical muted">steam.reviews.upserts.v2</p>
+          <dl id="kafka-metrics" class="data-list"></dl>
+          <div id="offsets" class="offsets"></div>
+        </section>
+        <section class="panel" aria-labelledby="quality-heading">
+          <div class="section-title"><div><p class="eyebrow">ĐỐI CHIẾU DỮ LIỆU</p><h2 id="quality-heading">Kiểm tra chất lượng</h2></div><span id="check-count" class="pill">—</span></div>
+          <p id="clean-counts" class="muted"></p>
+          <div id="checks" class="checks"></div>
+        </section>
+      </div>
+
+      <section class="panel log" aria-labelledby="log-heading">
+        <div class="section-title"><div><p class="eyebrow">BẰNG CHỨNG</p><h2 id="log-heading">Nhật ký lần chạy</h2></div></div>
+        <div id="logs"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="frame muted">Dữ liệu công khai từ Steamworks. Mốc thời gian hiển thị theo giờ Việt Nam.</footer>
+</body>
+</html>

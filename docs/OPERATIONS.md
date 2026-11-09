@@ -46,6 +46,34 @@ docker compose exec airflow airflow dags unpause steam_api_batch
 
 DAG pause sẽ dừng lịch mới. Trước khi chạy pipeline thủ công, cần chờ run đang hoạt động hoàn tất.
 
+<a id="backfill-va-dashboard"></a>
+
+## Backfill và dashboard
+
+Dừng lịch Airflow và chờ run đang chạy kết thúc. Dừng consumer liên tục để lượt backfill đo lag trên chính consumer group của pipeline.
+
+```powershell
+docker compose stop consumer
+docker compose up -d --wait kafka dashboard
+docker compose run --rm --entrypoint python worker -m src.backfill --run-id backfill-50x1000 --games 50 --per-game 1000
+```
+
+Mở [localhost:18081](http://localhost:18081) và chọn `backfill-50x1000`. Lệnh chọn game gốc từ Steam Charts, bỏ App ID trùng và game trong watchlist mặc định, rồi kiểm tra lượng review khớp ngôn ngữ trên Steam API. Crawler lấy tối đa 1.100 dòng mỗi game để dự phòng sau làm sạch. File xuất giữ đúng 1.000 review duy nhất mỗi game từ lượt crawl đó và báo lỗi nếu thiếu. Chạy lại cùng lệnh để resume từ cursor đã lưu.
+
+| File local | Bằng chứng |
+|---|---|
+| `data/steam_api/manifests/<run_id>.json` | Tiến độ từng game, cursor và metadata của các trang đã lưu |
+| `reports/runtime/runs/<run_id>/selection.json` | Nguồn Steam Charts, App ID được chọn và kết quả sàng lọc |
+| `reports/runtime/runs/<run_id>/steps/*.json` | Trạng thái, thời gian, số liệu và lỗi của từng lần thử mỗi bước |
+| `data/steam_api/exports/<run_id>/games.parquet` | Catalog của các game trong bộ review |
+| `data/steam_api/exports/<run_id>/reviews.parquet` | Bộ review đã kiểm tra số dòng, nguồn và ID duy nhất |
+| `data/steam_api/exports/<run_id>/summary.json` | Thống kê từng game, kiểm tra batch và SHA-256 của file Parquet |
+| `data/steam_api/exports/<run_id>/kafka.json` | Offset, lag và kết quả đối chiếu giữa batch và stream |
+
+Tốc độ publish tính từ số event được ACK chia cho thời gian bước gửi và cập nhật outbox. Tốc độ consume của báo cáo tính từ số offset đã xử lý chia cho tổng thời gian lưu receipt và commit offset được ghi lại qua các lần thử. Consumer ghi receipt song song trong một lô và chỉ commit sau khi mọi receipt hoặc quarantine của lô đã được lưu. Thời gian xuất Silver stream được đo riêng. Lag là số offset còn lại tại hai mốc trước và sau consume.
+
+Chạy lại consumer bằng `docker compose up -d consumer` khi muốn tiếp tục poll theo lịch.
+
 ## Chạy từng bước khi debug
 
 ```powershell

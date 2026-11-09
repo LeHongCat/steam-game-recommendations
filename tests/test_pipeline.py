@@ -2,13 +2,13 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pyarrow.parquet as pq
 
+from src import backfill, dashboard, storage, telemetry
 from src import pipeline as p
 from src import steam_api as api
-from src import storage
 from src import streaming as stream
 
 
@@ -179,6 +179,89 @@ class APIDataBoundaryTests(unittest.TestCase):
             self.assertEqual(
                 db.execute("SELECT COUNT(*) FROM outbox WHERE sent_at IS NULL").fetchone()[0], 2
             )
+
+    def test_publish_ack_failure_replays_the_uncommitted_batch(self):
+        self.run_poll("first", [review(), review("101")])
+        failed_ack = Mock()
+        failed_ack.get.side_effect = TimeoutError("No ACK")
+        producer = Mock()
+        producer.send.side_effect = [Mock(), failed_ack]
+
+        with self.assertRaises(TimeoutError):
+            stream.publish("unused", producer=producer)
+        first_attempt = producer.send.call_args_list[:]
+        with storage.database() as db:
+            pending = db.execute("SELECT COUNT(*) FROM outbox WHERE sent_at IS NULL").fetchone()[0]
+        self.assertEqual(pending, 2)
+
+        producer.reset_mock(side_effect=True)
+        result = stream.publish("unused", producer=producer)
+        self.assertEqual((result["published"], result["pending"]), (2, 0))
+        self.assertEqual(producer.send.call_args_list, first_attempt)
+
+    def test_atomic_write_retries_a_transient_sharing_violation(self):
+        destination = self.root / "manifest.json"
+        storage.atomic_json(destination, {"state": "before"})
+        replace = storage.os.replace
+
+        def busy_then_replace(temporary, target):
+            if busy.call_count == 1:
+                raise PermissionError("File temporarily in use")
+            return replace(temporary, target)
+
+        with patch.object(storage.os, "replace", side_effect=busy_then_replace) as busy:
+            storage.atomic_json(destination, {"state": "after"})
+        self.assertEqual(busy.call_count, 2)
+        self.assertEqual(storage.read_json(destination), {"state": "after"})
+
+    def test_backfill_export_counts_only_reviews_from_the_selected_crawl(self):
+        self.run_poll("earlier", [review("98"), review("99")])
+        self.run_poll("backfill", [review(), review("101", True)])
+        destination = storage.DATA / "exports/backfill"
+        summary = backfill.export_dataset("backfill", 2, destination)
+        self.assertEqual(summary["total_exported"], 2)
+        table = pq.read_table(destination / "reviews.parquet", columns=["review_id"])
+        self.assertEqual(set(table["review_id"].to_pylist()), {"100", "101"})
+        with self.assertRaisesRegex(ValueError, "need 3"):
+            backfill.export_dataset("backfill", 3, destination)
+
+    def test_dashboard_reads_failed_step_and_preserves_checkpoint_summary(self):
+        client = FixtureAPI([review(), review("101")], fail_page=1)
+        with (
+            patch("builtins.print"),
+            self.assertRaises(ConnectionError),
+        ):
+            telemetry.run_step("demo", "crawl", api.crawl, self.config, "demo", client)
+
+        result = dashboard.status("demo")
+        self.assertEqual(result["steps"]["crawl"]["status"], "failed")
+        self.assertIn("Injected page failure", result["steps"]["crawl"]["error"])
+        self.assertEqual(result["games"][0]["rows"], 1)
+        self.assertEqual(result["games"][0]["title"], "Test game")
+        self.assertNotIn("next_cursor", result["games"][0])
+
+    def test_consumer_commits_after_persisting_receipt_and_quarantine(self):
+        self.run_poll("first", [review(), review("101")])
+        with storage.database() as db:
+            payload = db.execute("SELECT payload_json FROM outbox LIMIT 1").fetchone()[0].encode()
+        messages = [
+            Mock(topic=stream.TOPIC, partition=0, offset=0, value=payload),
+            Mock(topic=stream.TOPIC, partition=0, offset=1, value=b"broken JSON"),
+        ]
+        consumer = Mock()
+        consumer.poll.return_value = {0: messages}
+
+        def check_commit():
+            self.assertTrue((storage.DATA / "bronze/kafka" / stream.TOPIC / "0/0.json").is_file())
+            self.assertTrue(
+                (storage.DATA / "quarantine/kafka" / stream.TOPIC / "0/1.json").is_file()
+            )
+
+        consumer.commit.side_effect = check_commit
+        with patch.object(stream, "KafkaConsumer", return_value=consumer):
+            result = stream.consume("unused", count=2, export=False)
+        consumer.commit.assert_called_once()
+        self.assertEqual((result["received"], result["accepted"], result["quarantined"]), (2, 1, 1))
 
     def test_duplicate_kafka_delivery_dedups_and_preserves_updated_review(self):
         self.run_poll("first", [review(), review("101")])

@@ -98,6 +98,16 @@ services:
     restart: on-failure
     mem_limit: 1g
 
+  dashboard:
+    <<: *pipeline
+    profiles: [ui]
+    entrypoint: [python, -m, src.dashboard, --host, "0.0.0.0"]
+    ports:
+      - "127.0.0.1:18081:18081"
+    volumes:
+      - .:/opt/airflow/project:ro
+    mem_limit: 512m
+
 volumes:
   kafka-data:
   airflow-state:

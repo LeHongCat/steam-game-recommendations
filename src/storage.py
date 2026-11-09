@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -34,6 +35,18 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
+def _replace(temporary, path):
+    for attempt in range(5):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            # Readers can briefly hold a non-delete-sharing handle on a Windows bind mount.
+            time.sleep(0.05 * 2**attempt)
+
+
 def atomic_bytes(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -43,7 +56,7 @@ def atomic_bytes(path, value):
             file.write(value)
             file.flush()
             os.fsync(file.fileno())
-        os.replace(temporary, path)
+        _replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -95,6 +108,6 @@ def write_parquet(path, rows, schema):
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     try:
         pq.write_table(pa.Table.from_pylist(rows, schema=schema), temporary, compression="snappy")
-        temporary.replace(path)
+        _replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
