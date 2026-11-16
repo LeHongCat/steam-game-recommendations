@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1517">
+  <title>Steam Search Activity</title>
+  <link rel="stylesheet" href="/static/style.css?v=6">
+  <link rel="stylesheet" href="/static/admin.css?v=3">
+  <script src="/static/scoring.js?v=1" defer></script>
+  <script src="/static/admin.js?v=3" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="frame top-inner">
+      <a class="brand" href="/admin">Steam<span> / </span>Admin</a>
+      <nav aria-label="Admin navigation">
+        <a href="/">User demo ↗</a>
+        <a href="http://localhost:18081/">Pipeline ↗</a>
+        <button id="admin-logout" class="chip" type="button" hidden>Sign out</button>
+      </nav>
+    </div>
+  </header>
+  <main class="frame">
+    <div id="admin-error" class="notice" role="alert" hidden></div>
+    <section id="admin-login" class="login-page" aria-labelledby="admin-login-title" hidden>
+      <div class="login-copy">
+        <p class="eyebrow">STEAM GAME RECOMMENDATION</p>
+        <h1 id="admin-login-title">Monitor game search activity</h1>
+        <p>See what users search for, which games they receive, and what they open.</p>
+      </div>
+      <form id="admin-login-form" class="login-form">
+        <h2>Admin sign-in</h2>
+        <label for="admin-pin">Admin PIN</label>
+        <input id="admin-pin" type="password" autocomplete="current-password" required maxlength="128">
+        <button class="primary" id="admin-login-button" type="submit">Open dashboard <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
+
+    <div id="admin-dashboard" hidden>
+      <section class="admin-heading">
+        <div>
+          <p class="eyebrow">RECOMMENDATION LOG</p>
+          <h1>Game search activity</h1>
+          <p id="refreshed" class="muted small" aria-live="polite"></p>
+        </div>
+        <div class="admin-filters">
+          <label for="filter-user">User
+            <select id="filter-user"><option value="">All</option><option value="1">User 1</option><option value="2">User 2</option><option value="3">User 3</option></select>
+          </label>
+          <label for="filter-period">Time
+            <select id="filter-period"><option value="0">All</option><option value="1">Last hour</option><option value="24">Last 24 hours</option><option value="168">Last 7 days</option></select>
+          </label>
+          <button id="refresh" class="chip" type="button">Refresh</button>
+        </div>
+      </section>
+      <section id="admin-stats" class="stats admin-stats" aria-label="Overview"></section>
+
+      <section class="chart-grid" aria-label="Search statistics">
+        <div class="metric-panel"><h2>Popular queries</h2><ul id="chart-queries" class="bar-chart"></ul></div>
+        <div class="metric-panel"><h2>Common criteria</h2><ul id="chart-criteria" class="bar-chart"></ul></div>
+        <div class="metric-panel"><h2>Selected reference games</h2><ul id="chart-selected-games" class="bar-chart"></ul></div>
+        <div class="metric-panel"><h2>Games viewed or opened</h2><ul id="chart-viewed-games" class="bar-chart"></ul></div>
+      </section>
+
+      <section class="metric-panel" aria-labelledby="ledger-title">
+        <div class="section-heading">
+          <h2 id="ledger-title">Searches</h2>
+          <p id="ledger-count" class="muted small"></p>
+        </div>
+        <div class="table-scroll">
+          <table class="activity-table">
+            <thead><tr><th scope="col">Time</th><th scope="col">User</th><th scope="col">Query and selected games</th><th scope="col">Results</th><th scope="col">Viewed</th><th scope="col">Details</th></tr></thead>
+            <tbody id="activity-rows"></tbody>
+          </table>
+        </div>
+        <div class="admin-pagination">
+          <button id="previous-page" class="chip" type="button">← Previous</button>
+          <button id="next-page" class="chip" type="button">Next →</button>
+        </div>
+      </section>
+
+      <section id="search-inspect" class="metric-panel" aria-labelledby="inspect-title" tabindex="-1" hidden>
+        <div class="section-heading">
+          <div><p id="inspect-meta" class="muted small"></p><h2 id="inspect-title">Search details</h2></div>
+          <button id="close-inspect" class="chip" type="button">Close</button>
+        </div>
+        <div id="search-inputs" class="search-inputs"></div>
+        <div class="table-scroll">
+          <table class="activity-table">
+            <thead><tr><th scope="col">Rank</th><th scope="col">Recommended game</th><th scope="col">Score</th><th scope="col">Interactions</th></tr></thead>
+            <tbody id="result-rows"></tbody>
+          </table>
+        </div>
+        <h3>Event timeline</h3>
+        <ol id="event-timeline" class="timeline"></ol>
+      </section>
+
+      <details id="absa-browser" class="metric-panel absa-browser">
+        <summary>ABSA data and coverage</summary>
+        <p class="muted small">Phase 1 analyzes Steam reviews by aspect, such as graphics or story, and assigns a sentiment to each mention.</p>
+        <p id="absa-status" class="muted small" aria-live="polite"></p>
+        <div id="absa-content" hidden>
+          <dl id="absa-audit"></dl>
+          <label for="absa-game">Breakdown by game</label>
+          <select id="absa-game"></select>
+          <p id="absa-coverage" class="muted small"></p>
+          <div class="table-scroll">
+            <table class="activity-table">
+              <thead><tr><th scope="col">Aspect</th><th scope="col">Reviews mentioning aspect</th><th scope="col">Positive mentions</th><th scope="col">Neutral mentions</th><th scope="col">Negative mentions</th></tr></thead>
+              <tbody id="absa-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+  </main>
+  <footer class="frame muted small">Activity from local demo profiles.</footer>
+</body>
+</html>

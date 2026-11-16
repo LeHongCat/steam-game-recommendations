@@ -26,6 +26,18 @@ Lần chạy sau có thể dùng `.\scripts\demo.ps1 -SkipBuild`. Dừng các se
 
 ## Dashboard demo
 
+### Gợi ý game
+
+Chạy với `database/` nằm cạnh repository và snapshot Steam 50 game đã xuất:
+
+```powershell
+.\scripts\recommendation.ps1 -InstallQueryModel -CacheArtwork
+```
+
+Mở [User](http://localhost:18082/) và đăng nhập User 1, 2 hoặc 3. Nhập **“I want a fast-paced FPS with beautiful graphics”** hoặc **“Lái xe tải chở hàng xuyên châu Âu”**. Trong **Score and review evidence**, xem phép tính điểm Top-K và trích dẫn review. Mở [Admin](http://localhost:18082/admin) ở tab khác với PIN demo `2468` để kiểm tra điểm đã ghi và thao tác trên kết quả. Xem [kịch bản demo hai màn hình](docs/RECOMMENDATION.md#demo-hai-man-hinh) và [FastAPI Swagger](http://localhost:18082/docs).
+
+### Pipeline Steam và Kafka
+
 ```powershell
 docker compose up -d dashboard
 ```
@@ -65,6 +77,12 @@ Review mới được quan sát hoặc thay đổi phiên bản sẽ tạo event
 | `src/backfill.py` | Crawl theo lô, xuất Parquet theo mục tiêu và đo Kafka |
 | `src/dashboard.py`, `ui/` | Dashboard chỉ đọc từ checkpoint và báo cáo local |
 | `dags/steam_api_batch.py` | DAG chạy mỗi giờ |
+| `src/recommendation_build.py`, `src/recommendation_handoff.py` | Kiểm tra bộ bàn giao ABSA, đánh giá E1–E5, ghi `serving.sqlite` |
+| `src/recommendation.py`, `src/recommendation_query.py`, `src/query_model.py` | Xếp hạng hybrid, phân tích câu nhập và model truy vấn ONNX |
+| `src/recommendation_api.py`, `src/recommendation_activity.py`, `ui/recommendation/` | FastAPI, phiên demo, nhật ký tìm kiếm và giao diện User/Admin |
+| `src/recommendation_art.py`, `src/recommendation_labels.py` | Cache ảnh Steam và nhãn hiển thị |
+
+`.runtime/query-python` chứa dependency của model truy vấn do `scripts/recommendation.ps1 -InstallQueryModel` cài; không xóa thư mục này khi service recommendation đang chạy.
 
 ## Tài liệu và kiểm tra
 
@@ -73,9 +91,10 @@ Review mới được quan sát hoặc thay đổi phiên bản sẽ tạo event
 - [Vận hành](docs/OPERATIONS.md): cấu hình, chạy thủ công, test và xử lý lỗi.
 - [Báo cáo kiểm chứng](reports/VERIFICATION.md): snapshot có thời điểm ghi nhận, không phải trạng thái live.
 - [Kết quả backfill 50 game](reports/BACKFILL_50X1000.md): số dòng, thời gian từng bước và số đo Kafka từ lượt chạy thực tế.
+- [Kết quả recommendation](reports/RECOMMENDATION.md): phép thử E1–E5 và độ trễ HTTP local.
 
 ```powershell
 docker compose run --rm --entrypoint python worker -m unittest discover -s tests -v
 ```
 
-Bản triển khai dùng Kafka một broker, Airflow standalone và filesystem local cho demo môn học. ABSA và mô hình recommendation là bước tiếp theo.
+Bản triển khai dùng Kafka một broker, Airflow standalone và filesystem local cho demo môn học. Demo recommendation kết hợp hồ sơ người dùng, dữ liệu ABSA Phase 1 và model truy vấn ngữ nghĩa chạy trên CPU.

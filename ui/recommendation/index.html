@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1517">
+  <title>Steam Game Recommendations</title>
+  <link rel="stylesheet" href="/static/style.css?v=6">
+  <script src="/static/scoring.js?v=1" defer></script>
+  <script src="/static/app.js?v=5" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="frame top-inner">
+      <a class="brand" href="/">Steam<span> / </span>Game Recommendations</a>
+      <nav aria-label="Navigation">
+        <a href="/admin">Admin ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="frame">
+    <div id="page-error" class="notice" role="alert" hidden></div>
+    <section id="user-login" class="login-page" aria-labelledby="user-login-title" hidden>
+      <div class="login-copy">
+        <p class="eyebrow">STEAM GAME RECOMMENDATION</p>
+        <h1 id="user-login-title">Find games that suit your taste</h1>
+        <p>Sign in to combine a demo profile’s Steam review history with your search.</p>
+      </div>
+      <form id="user-login-form" class="login-form">
+        <h2>User sign-in</h2>
+        <label for="user-id">User ID</label>
+        <select id="user-id">
+          <option value="1">User 1</option>
+          <option value="2">User 2</option>
+          <option value="3">User 3</option>
+        </select>
+        <p class="muted small">The demo records searches and interactions with recommended games.</p>
+        <button class="primary" id="user-login-button" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
+
+    <div id="user-area" hidden>
+      <nav class="user-nav" aria-label="Navigation User">
+        <a id="browse-tab" href="#discover">Discover</a>
+        <a id="evaluation-tab" href="#evaluation">Evaluation</a>
+        <div class="session-actions"><strong id="user-label"></strong>
+          <button id="user-logout" class="chip" type="button">Sign out</button>
+        </div>
+      </nav>
+    <section id="browse">
+      <div class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">STEAM GAME RECOMMENDATION</p>
+          <h1>Find your next game</h1>
+          <p>Describe what you want to play. Recommendations combine your request, Steam tags, review aspects, and your history.</p>
+        </div>
+      </div>
+
+      <section class="query-panel" aria-labelledby="query-title">
+        <h2 id="query-title"><label for="query">What do you want to play?</label></h2>
+        <div class="query-row">
+          <textarea id="query" form="preferences" rows="2" maxlength="400"
+            placeholder="I want a fast-paced FPS with beautiful graphics"></textarea>
+          <button id="query-submit" class="primary" form="preferences" type="submit" disabled>
+            Find games <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <div id="query-examples" class="chips">
+          <button class="chip" type="button" data-query="I want a fast-paced FPS with beautiful graphics">FPS with great graphics</button>
+          <button class="chip" type="button" data-query="I want an RPG with a great story and soundtrack">Story-rich RPG</button>
+          <button class="chip" type="button" data-query="Open-world co-op, no horror">Open-world co-op</button>
+          <button class="chip" type="button" data-query="Drive trucks across Europe and deliver cargo">Deliver cargo across Europe</button>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <aside class="preferences">
+          <h2>Your preferences</h2>
+          <form id="preferences">
+            <p id="profile-note" class="muted small" hidden></p>
+            <p id="recent-clicks" class="muted small" hidden></p>
+            <p id="review-aspects" class="muted small" hidden></p>
+
+            <label for="game-picker">Games you like</label>
+            <select id="game-picker"><option value="">Add up to 5 games</option></select>
+            <div id="seeds" class="chips" aria-label="Selected games"></div>
+
+            <fieldset>
+              <legend>Review aspects</legend>
+              <p class="muted small">Aspects are topics in Steam reviews, such as graphics, gameplay, and story. ABSA identifies the topic and its sentiment.</p>
+              <div id="aspects" class="chips"></div>
+            </fieldset>
+
+            <label for="top-k">Results to show (K)</label>
+            <select id="top-k"><option value="6">6 games</option><option value="12">12 games</option><option value="20">20 games</option></select>
+            <button id="submit" class="primary" type="submit" disabled>Apply preferences <span aria-hidden="true">→</span></button>
+            <button id="clear-preferences" class="quiet" type="button">Clear preferences</button>
+          </form>
+        </aside>
+
+        <section class="results" aria-labelledby="results-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">RANKING</p><h2 id="results-title">Recommended for you</h2></div>
+            <p id="result-count" class="muted small" role="status"></p>
+          </div>
+          <details class="ranking-help">
+            <summary>How Top-K works</summary>
+            <p>Eligible games are sorted by final score. K is the maximum number shown. Open a result to see its calculation.</p>
+            <p>Aspect adjustments use sentiment quality scaled to 0–1 and coverage of your requested aspects. An aspect needs at least 10 reviews for the game to count.</p>
+          </details>
+          <p id="result-status" class="muted" aria-live="polite">Enter a request or choose games you like to get started.</p>
+          <div id="query-interpretation" class="query-interpretation" aria-live="polite" hidden>
+            <h3>How we interpreted your request</h3>
+            <div id="query-criteria" class="chips"></div>
+            <p id="query-note" class="muted small" hidden></p>
+          </div>
+          <div id="games" class="cards"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="evaluation" hidden>
+      <div class="evaluation-heading">
+        <p class="eyebrow">OFFLINE EVALUATION</p>
+        <h1>Ranking evaluation</h1>
+        <p class="muted">Compare E1–E5 on the same chronological test set.</p>
+      </div>
+      <div id="stats" class="stats"></div>
+      <section class="metric-panel" aria-labelledby="metrics-title">
+        <h2 id="metrics-title">Test set results</h2>
+        <p id="split" class="muted small"></p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Configuration</th><th scope="col">Recall@10</th><th scope="col">NDCG@10</th><th scope="col">MAP@10</th><th scope="col">Coverage</th></tr></thead>
+            <tbody id="evaluation-rows"></tbody>
+          </table>
+        </div>
+        <p id="evaluation-note" class="muted small"></p>
+      </section>
+      <section class="metric-panel" aria-labelledby="monitoring-title">
+        <h2 id="monitoring-title">API and feedback metrics</h2>
+        <dl id="serving-metrics"></dl>
+        <p id="versions" class="muted small"></p>
+      </section>
+    </section>
+    </div>
+  </main>
+  <footer class="frame muted small">Data from the Steam API and Phase 1 aspect-based sentiment analysis.</footer>
+</body>
+</html>

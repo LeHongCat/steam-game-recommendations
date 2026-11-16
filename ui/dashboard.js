@@ -1,47 +1,47 @@
 const stepNames = {
-  select_games: "Chọn game từ Steam Charts",
-  crawl: "Crawl và lưu Bronze",
-  clean: "Làm sạch Silver",
-  aggregate: "Tổng hợp Gold",
-  verify_batch: "Kiểm tra batch",
-  export_dataset: "Xuất bộ review Parquet",
-  publish: "Gửi event Kafka",
-  consume: "Nhận event và commit offset",
-  export_stream: "Tạo Silver stream",
-  verify_stream: "Đối chiếu batch và stream",
+  select_games: "Select games from Steam Charts",
+  crawl: "Crawl and store Bronze data",
+  clean: "Clean Silver data",
+  aggregate: "Aggregate Gold data",
+  verify_batch: "Validate batch",
+  export_dataset: "Export reviews as Parquet",
+  publish: "Publish Kafka events",
+  consume: "Consume events and commit offsets",
+  export_stream: "Build Silver stream",
+  verify_stream: "Reconcile batch and stream",
 };
 
 const checkNames = {
-  bronze_checksums: "Checksum các trang Bronze khớp",
-  collection_complete: "Crawl đã hoàn tất",
-  requested_games_available: "Có đủ game trong danh sách",
-  nonempty_reviews: "Có dữ liệu review",
-  unique_review_ids: "Review ID duy nhất",
-  valid_item_references: "Review và feedback trỏ đúng game",
-  review_reconciliation: "Khớp số dòng crawl, trùng và bị loại",
-  one_feedback_per_review: "Mỗi review có một feedback",
-  valid_utc_timestamps: "Timestamp UTC hợp lệ",
-  gold_reconciliation: "Gold khớp số review trong Silver",
-  binary_feedback_preserved: "Giữ cả hai nhãn recommend",
-  latest_quality_gate: "Batch đạt kiểm tra chất lượng",
-  no_pending_outbox: "Outbox đã gửi hết",
-  all_sent_versions_consumed: "Đã nhận đủ event được ACK",
-  stream_matches_batch_review_ids: "Batch và stream khớp review ID",
-  stream_matches_batch_content: "Batch và stream khớp phiên bản review",
-  api_source_only: "Batch dùng dữ liệu Steam API",
-  api_events_only: "Stream dùng event từ Steam API",
+  bronze_checksums: "Bronze page checksums match",
+  collection_complete: "Collection complete",
+  requested_games_available: "All requested games available",
+  nonempty_reviews: "Reviews collected",
+  unique_review_ids: "Unique review IDs",
+  valid_item_references: "Valid game references",
+  review_reconciliation: "Collected, duplicate, and rejected counts reconcile",
+  one_feedback_per_review: "One feedback entry per review",
+  valid_utc_timestamps: "Valid UTC timestamps",
+  gold_reconciliation: "Gold and Silver review counts match",
+  binary_feedback_preserved: "Positive and negative recommendations retained",
+  latest_quality_gate: "Batch passes quality checks",
+  no_pending_outbox: "Outbox fully published",
+  all_sent_versions_consumed: "All acknowledged events consumed",
+  stream_matches_batch_review_ids: "Batch and stream review IDs match",
+  stream_matches_batch_content: "Batch and stream review versions match",
+  api_source_only: "Batch sourced from Steam API",
+  api_events_only: "Stream sourced from Steam API",
 };
 
-const states = {running: "Đang chạy", success: "Hoàn tất", failed: "Lỗi", pending: "Chờ", cancelled: "Đã dừng"};
+const states = {running: "Running", success: "Complete", failed: "Failed", pending: "Pending", cancelled: "Cancelled"};
 const labels = {
   ...stepNames,
-  lag_before: "Đo lag trước khi nhận",
-  lag_resume: "Đo lag khi tiếp tục",
-  lag_after: "Đo lag sau khi nhận",
+  lag_before: "Measure lag before consumption",
+  lag_resume: "Measure lag on resume",
+  lag_after: "Measure lag after consumption",
 };
-const counts = new Intl.NumberFormat("vi-VN", {maximumFractionDigits: 2});
-const clock = new Intl.DateTimeFormat("vi-VN", {timeStyle: "medium", timeZone: "Asia/Ho_Chi_Minh"});
-const date = new Intl.DateTimeFormat("vi-VN", {dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh"});
+const counts = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2});
+const clock = new Intl.DateTimeFormat("en-US", {timeStyle: "medium", timeZone: "Asia/Ho_Chi_Minh"});
+const date = new Intl.DateTimeFormat("en-US", {dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh"});
 const $ = (id) => document.getElementById(id);
 const number = (value) => value == null ? "—" : counts.format(value);
 const unit = (value, suffix) => value == null ? "—" : `${number(value)} ${suffix}`;
@@ -61,8 +61,8 @@ function renderGames(data) {
   const games = data.games.filter((game) => `${game.title} ${game.app_id}`.toLocaleLowerCase().includes(query));
   text("game-count", query ? `${games.length}/${data.games.length} game` : unit(data.games.length, "game"));
   text("game-description", data.target
-    ? `Mục tiêu ${number(data.target)} review hợp lệ mỗi game. Trần lấy thô ${number(data.raw_limit)}.`
-    : `Lượt poll tối đa ${number(data.raw_limit)} review mỗi game.`);
+    ? `Target ${number(data.target)} valid reviews per game. Raw limit ${number(data.raw_limit)}.`
+    : `Polling up to ${number(data.raw_limit)} reviews per game.`);
   const list = $("game-list");
   const scroll = list.scrollTop;
   list.classList.toggle("large", large);
@@ -74,15 +74,15 @@ function renderGames(data) {
     const progress = element("progress");
     progress.max = completed ? data.target : data.raw_limit;
     progress.value = completed ? game.export.exported : game.rows;
-    progress.setAttribute("aria-label", `${game.title} ${completed ? "đã xuất" : "đã crawl"}`);
+    progress.setAttribute("aria-label", `${game.title} ${completed ? "exported" : "collected"}`);
     const detail = completed
-      ? `${number(game.export.positive)} recommend · ${number(game.export.negative)} không recommend`
-      : `${unit(game.pages, "trang")} · ${game.done ? "Đã lấy xong" : game.pages ? "Đang lấy" : "Chờ lấy"}`;
+      ? `${number(game.export.positive)} positive · ${number(game.export.negative)} negative`
+      : `${unit(game.pages, "pages")} · ${game.done ? "Collected" : game.pages ? "Collecting" : "Pending"}`;
     node.append(header, progress, element("p", `App ${game.app_id} · ${detail}`, "game-meta"));
     return node;
   }));
   list.scrollTop = scroll;
-  if (!games.length) list.append(element("p", "Không có game khớp từ khóa.", "muted"));
+  if (!games.length) list.append(element("p", "No games match the search.", "muted"));
 }
 
 function renderSteps(data) {
@@ -118,17 +118,17 @@ function renderKafka(data) {
   const after = data.steps.lag_after?.metrics;
   const offsets = after ?? resume ?? before;
   text("published", number(publish.published));
-  text("publish-rate", unit(publish.events_per_second, "event/s khi gửi"));
+  text("publish-rate", unit(publish.events_per_second, "events/s published"));
   text("lag", number(offsets?.lag));
-  text("lag-detail", after ? "Sau khi consume" : resume ? "Khi tiếp tục consume" : before ? "Trước khi consume" : "Chờ đo trên broker");
+  text("lag-detail", after ? "After consumption" : resume ? "On resume" : before ? "Before consumption" : "Waiting for broker measurement");
   const rows = [
-    ["Event chờ trong outbox sau publish", number(publish.pending)],
-    ["Tốc độ publish", unit(publish.events_per_second, "event/s")],
-    ["Offset consumer xử lý", number(data.kafka.offsets_processed ?? consume.received)],
-    ["Tốc độ consume", unit(data.kafka.consume_events_per_second ?? consume.events_per_second, "event/s")],
-    ["Consumer lag trước → sau", `${number(before?.lag)} → ${number(after?.lag)}`],
+    ["Pending outbox events after publish", number(publish.pending)],
+    ["Publish throughput", unit(publish.events_per_second, "event/s")],
+    ["Consumer offsets processed", number(data.kafka.offsets_processed ?? consume.received)],
+    ["Consume throughput", unit(data.kafka.consume_events_per_second ?? consume.events_per_second, "event/s")],
+    ["Consumer lag before → after", `${number(before?.lag)} → ${number(after?.lag)}`],
     ["Receipt Bronze Kafka trong snapshot", number(data.kafka.bronze_receipts)],
-    ["Lượt giao trùng đã gộp", number(data.steps.export_stream?.metrics?.duplicate_deliveries_collapsed)],
+    ["Duplicate deliveries merged", number(data.steps.export_stream?.metrics?.duplicate_deliveries_collapsed)],
   ];
   $("kafka-metrics").replaceChildren(...rows.map(([name, value]) => {
     const row = element("div");
@@ -146,19 +146,19 @@ function renderChecks(data) {
   const outcomes = groups.flatMap(([, checks]) => Object.values(checks));
   const clean = data.counts;
   text("clean-counts", clean.unique_reviews_in_poll == null ? "" : [
-    unit(clean.unique_reviews_in_poll, "ID hợp lệ trong lượt crawl"),
-    unit(clean.duplicate_review_rows, "dòng trùng"),
-    unit(clean.rejected_reviews, "dòng bị loại"),
+    unit(clean.unique_reviews_in_poll, "valid review IDs in this crawl"),
+    unit(clean.duplicate_review_rows, "duplicate rows"),
+    unit(clean.rejected_reviews, "rejected rows"),
   ].join(" · "));
-  text("check-count", outcomes.length ? `${outcomes.filter(Boolean).length}/${outcomes.length} đạt` : "Chờ kiểm tra");
+  text("check-count", outcomes.length ? `${outcomes.filter(Boolean).length}/${outcomes.length} passed` : "Awaiting checks");
   $("checks").replaceChildren(...groups.flatMap(([group, checks]) => [
     element("p", group, "check-group"),
     ...Object.entries(checks).map(([key, passed]) => {
       const row = element("div", null, `check ${passed ? "" : "failed"}`);
-      row.append(element("span", checkNames[key] ?? key), element("span", passed ? "Đạt" : "Lỗi"));
+      row.append(element("span", checkNames[key] ?? key), element("span", passed ? "Pass" : "Failed"));
       return row;
     }),
-    ...(Object.keys(checks).length ? [] : [element("p", "Chưa có kết quả", "muted")]),
+    ...(Object.keys(checks).length ? [] : [element("p", "No results yet", "muted")]),
   ]));
 }
 
@@ -173,10 +173,10 @@ function renderLogs(data) {
   });
   $("logs").replaceChildren(...data.incidents.map((incident) => {
     const line = element("div", null, "log-entry incident");
-    line.append(element("span", "Gián đoạn", "log-label"), element("span", incident.detail, "log-message"));
+    line.append(element("span", "Interruption", "log-label"), element("span", incident.detail, "log-message"));
     return line;
   }), ...rows);
-  if (!$("logs").children.length) $("logs").append(element("p", "Lần chạy chưa có nhật ký từng bước.", "muted"));
+  if (!$("logs").children.length) $("logs").append(element("p", "This run has no step logs.", "muted"));
 }
 
 function render(data) {
@@ -189,14 +189,14 @@ function render(data) {
   $("results").hidden = !data.run_id || data.missing;
   $("notice").hidden = !$("results").hidden;
   if ($("results").hidden) {
-    text("notice", data.missing ? "Không tìm thấy lần chạy đã chọn." : "Chưa có dữ liệu Steam. Hãy chạy pipeline để bắt đầu.");
+    text("notice", data.missing ? "Selected run not found." : "No Steam data yet. Run the pipeline to get started.");
     return;
   }
-  text("run-caption", `Bắt đầu ${date.format(new Date(data.started_at))} · Ngôn ngữ Steam ${data.language}`);
+  text("run-caption", `Started ${date.format(new Date(data.started_at))} · Steam language ${data.language}`);
   text("raw", number(data.games.reduce((total, game) => total + game.rows, 0)));
-  text("pages", unit(data.games.reduce((total, game) => total + game.pages, 0), "trang review đã lưu"));
+  text("pages", unit(data.games.reduce((total, game) => total + game.pages, 0), "review pages saved"));
   text("exported", number(data.exported));
-  text("target", data.target ? `Mục tiêu ${number(data.target * data.games.length)} review` : "Xuất riêng cho lượt backfill");
+  text("target", data.target ? `Target ${number(data.target * data.games.length)} review` : "Dataset export available for backfills");
   renderGames(data);
   renderSteps(data);
   renderKafka(data);
@@ -219,13 +219,13 @@ async function refresh() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     render(await response.json());
     $("connection").className = "connection live";
-    text("connection", "Đang cập nhật");
+    text("connection", "Updating");
   } catch (error) {
     if (error.name === "AbortError") return;
     $("connection").className = "connection";
-    text("connection", "Mất kết nối");
+    text("connection", "Disconnected");
     $("notice").hidden = false;
-    text("notice", "Không đọc được trạng thái. Dashboard sẽ tự thử lại.");
+    text("notice", "Could not load run status. Retrying automatically.");
   } finally {
     if (request === current) timer = setTimeout(refresh, 4000);
   }

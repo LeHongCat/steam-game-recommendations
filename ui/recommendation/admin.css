@@ -1,0 +1,45 @@
+.top nav { align-items: center; }
+.login-form input { width: 100%; border: 1px solid #40575b; background: #0d1a1e; color: var(--text); border-radius: 7px; padding: 8px 10px; font: inherit; }
+.admin-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 36px 0 20px; }
+.admin-heading h1 { font-size: clamp(2.35rem, 4.5vw, 3.8rem); margin: 8px 0 12px; }
+.admin-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.admin-filters label { color: var(--muted); font-size: .8rem; }
+.admin-filters select { display: block; min-width: 98px; margin-top: 4px; }
+.admin-filters button { min-height: 37px; }
+.admin-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+.chart-grid .metric-panel { margin: 0; }
+.chart-grid h2, #ledger-title, #inspect-title { margin-bottom: 0; }
+.bar-chart { margin: 10px 0 0; padding: 0; list-style: none; }
+.bar-chart li + li { margin-top: 8px; }
+.bar-label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: .85rem; }
+.bar-label span { overflow-wrap: anywhere; }
+.bar-label strong { font-variant-numeric: tabular-nums; }
+.bar-track { margin-top: 4px; height: 6px; border-radius: 4px; background: #263a3e; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; background: #8dc9aa; }
+.activity-table th, .activity-table td { text-align: left; vertical-align: top; }
+.activity-table th:first-child { min-width: 96px; }
+.activity-table td { font-size: .87rem; }
+.activity-table .search-query { max-width: 520px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.activity-table .chip { white-space: nowrap; }
+.event-badge { white-space: nowrap; }
+.admin-pagination { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.chip:disabled { opacity: .45; cursor: default; }
+.search-inputs { margin-top: 10px; padding: 10px 12px; border-left: 2px solid #6eac8b; background: #112322; overflow-wrap: anywhere; }
+.search-inputs p { margin: 4px 0; }
+.search-inputs strong { margin-right: 8px; }
+.timeline { margin: 8px 0 0; padding-left: 22px; }
+.timeline li { margin: 4px 0; }
+.absa-browser summary { font-weight: 730; font-size: 1.22rem; color: var(--text); }
+#absa-status, #absa-coverage { margin-top: 8px; overflow-wrap: anywhere; }
+#absa-audit dd { min-width: 0; max-width: 60%; overflow-wrap: anywhere; }
+#absa-game { display: block; width: min(100%, 360px); margin-top: 4px; }
+@media (max-width: 850px) {
+  .admin-heading { flex-direction: column; align-items: flex-start; }
+  .admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .top nav { gap: 8px; }
+  .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-grid { grid-template-columns: 1fr; }
+}
