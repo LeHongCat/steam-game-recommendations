@@ -28,9 +28,23 @@ TAGS = {
     3859: ("Multiplayer", ("multiplayer", "nhieu nguoi")),
     4182: ("Single-player", ("singleplayer", "single player", "choi don")),
     PACE_TAG: ("Fast-paced", ("fast paced", "nhip do nhanh", "gameplay nhanh", "toc do cao")),
+    19: ("Action", ("action", "hanh dong")),
+    21: ("Adventure", ("adventure", "phieu luu")),
+    701: ("Sports", ("sports", "sport", "the thao", "bong da", "football", "soccer")),
+    3810: ("Sandbox", ("sandbox",)),
+    176981: ("Battle Royale", ("battle royale",)),
+    1742: ("Story rich", ("story rich", "story driven")),
+    1659: ("Zombies", ("zombie", "zombies", "xac song")),
+    1644: ("Driving", ("driving", "drive", "truck", "trucks", "lai xe", "xe tai")),
+    3942: ("Sci-fi", ("sci fi", "scifi", "science fiction", "khoa hoc vien tuong")),
+    1684: ("Fantasy", ("fantasy", "gia tuong", "ky ao")),
+    1666: ("Card game", ("card game", "the bai", "danh bai")),
+    113: ("Free to play", ("free to play", "mien phi")),
 }
 ASPECTS = {
-    "GRAPHICS#GENERAL": ("do hoa", "hinh anh", "graphics", "visuals"),
+    "GRAPHICS#GENERAL": (
+        "do hoa", "hinh anh", "dep mat", "graphics", "visuals", "beautiful", "gorgeous"
+    ),
     "GAMEPLAY#GENERAL": ("gameplay", "loi choi", "co che choi", "combat"),
     "STORY#GENERAL": ("cot truyen", "cau chuyen", "story", "narrative"),
     "AUDIO#GENERAL": ("am thanh", "nhac nen", "soundtrack", "audio"),

@@ -34,7 +34,7 @@ Chạy với `database/` nằm cạnh repository và snapshot Steam 50 game đã
 .\scripts\recommendation.ps1 -InstallQueryModel -CacheArtwork
 ```
 
-Mở [User](http://localhost:18082/) và đăng nhập User 1, 2 hoặc 3. Nhập **“I want a fast-paced FPS with beautiful graphics”** hoặc **“Lái xe tải chở hàng xuyên châu Âu”**. Trong **Score and review evidence**, xem phép tính điểm Top-K và trích dẫn review. Mở [Admin](http://localhost:18082/admin) ở tab khác với PIN demo `2468` để kiểm tra điểm đã ghi và thao tác trên kết quả. Xem [kịch bản demo hai màn hình](docs/RECOMMENDATION.md#demo-hai-man-hinh) và [FastAPI Swagger](http://localhost:18082/docs).
+Mở [User](http://localhost:18082/) và chọn một trong ba hồ sơ người chơi. Bấm một câu mẫu như **“Fast-paced FPS, great graphics”** hoặc **“Lái xe tải xuyên châu Âu”**, hoặc gõ yêu cầu tự do. Bấm **Why this game?** trên một thẻ để xem lý do, cách tính điểm và trích dẫn review. Mở [Admin](http://localhost:18082/admin) ở tab khác với PIN demo `2468` để kiểm tra điểm đã ghi và thao tác trên kết quả. Xem [kịch bản demo hai màn hình](docs/RECOMMENDATION.md#demo-hai-man-hinh) và [FastAPI Swagger](http://localhost:18082/docs).
 
 ### Pipeline Steam và Kafka
 

@@ -270,6 +270,55 @@ async function loadAbsa() {
   renderGameAspects();
 }
 
+async function loadEvaluation() {
+  if (!signedIn || !byId("evaluation-browser").open) return;
+  byId("evaluation-status").textContent = "Loading evaluation…";
+  const data = await api("/api/metrics");
+  const report = data.evaluation;
+  const decimal = new Intl.NumberFormat("en-US", {maximumFractionDigits: 4});
+  const splitDates = new Intl.DateTimeFormat("en-US", {dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh"});
+  const stats = [
+    ["Games in the catalog", data.games], ["Steam reviews", data.reviews],
+    ["ABSA-processed reviews", data.absa_processed], ["Validation users", report.validation_users],
+    ["Test users", report.test_users],
+  ];
+  byId("evaluation-stats").replaceChildren(...stats.map(([label, count]) => {
+    const box = element("div", null, "stat");
+    box.append(element("strong", number.format(count)), element("span", label, "muted small"));
+    return box;
+  }));
+  byId("evaluation-rows").replaceChildren(...report.results.map(row => {
+    const tr = element("tr");
+    tr.append(element("td", row.id + " · " + row.label));
+    for (const key of ["recall", "ndcg", "map", "coverage"]) {
+      tr.append(element("td", row[key] == null ? "—" : decimal.format(row[key])));
+    }
+    return tr;
+  }));
+  byId("evaluation-split").textContent = "Train / validation / test · "
+    + [report.train_reviews, report.validation_reviews, report.test_reviews].map(number.format).join(" / ")
+    + " reviews · split at " + [report.train_end_exclusive, report.validation_end_exclusive]
+      .map(value => splitDates.format(new Date(value))).join(" and ")
+    + " · weights " + report.weights.join(" / ");
+  const values = [
+    ["Recent requests sampled", data.sample_requests],
+    ["API ranking latency P50 (ms)", data.latency_ms.p50],
+    ["API ranking latency P95 (ms)", data.latency_ms.p95],
+    ["Requests with no results", data.empty_results],
+    ["Impressions", data.feedback.impression ?? 0],
+    ["Steam clicks", data.feedback.click ?? 0],
+    ["Dismissals", data.feedback.dismiss ?? 0],
+  ];
+  byId("serving-metrics").replaceChildren(...values.map(([label, value]) => {
+    const row = element("div");
+    row.append(element("dt", label), element("dd", value == null ? "—" : decimal.format(value)));
+    return row;
+  }));
+  byId("evaluation-versions").textContent = data.model_version + " · " + data.run_id + " · " + data.absa_model;
+  byId("evaluation-status").textContent = "";
+  byId("evaluation-content").hidden = false;
+}
+
 byId("admin-login-form").addEventListener("submit", async event => {
   event.preventDefault();
   showError();
@@ -309,6 +358,7 @@ byId("next-page").addEventListener("click", () => { offset += PAGE_SIZE; refresh
 byId("refresh").addEventListener("click", () => { showError(); refresh().catch(handleError); });
 byId("absa-browser").addEventListener("toggle", () => loadAbsa().catch(handleError));
 byId("absa-game").addEventListener("change", renderGameAspects);
+byId("evaluation-browser").addEventListener("toggle", () => loadEvaluation().catch(handleError));
 
 api("/api/admin/session").then(({authenticated}) => {
   showSession(authenticated);

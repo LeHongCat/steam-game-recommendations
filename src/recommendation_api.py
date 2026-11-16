@@ -337,21 +337,22 @@ def rank_request(request, demo_user_id=None):
     semantic = query_model.score(query, ranker.games) if query else None
     semantic_weight = QUERY_MODEL_WEIGHT
     semantic_only = bool(intent and not intent.recognized)
+    match = "rules" if intent and intent.recognized else None
     if semantic_only:
-        # Relevance dominates when the request has no supported tag or aspect.
-        semantic = query_model.close_matches(semantic)
+        # Relevance dominates when the request has no supported tag or aspect. Weak matches
+        # still rank the whole catalog by similarity so a free-text request never comes back
+        # empty; the response says the match is approximate.
+        close = query_model.close_matches(semantic)
+        match = "close" if close else "approximate" if semantic else None
+        semantic = close or semantic
         semantic_weight = query_model.SEMANTIC_ONLY_WEIGHT
     requested_aspects = intent.aspects if intent else []
     priorities = list(
         dict.fromkeys([*request.aspects, *(name for name in requested_aspects if name in topics)])
     )
-    ranked = (
-        []
-        if semantic_only and not semantic
-        else ranker.rank(
-            user_id, request.liked_items, priorities, request.top_k, intent=intent, clicked=clicked,
-            semantic=semantic, semantic_weight=semantic_weight,
-        )
+    ranked = ranker.rank(
+        user_id, request.liked_items, priorities, request.top_k, intent=intent, clicked=clicked,
+        semantic=semantic, semantic_weight=semantic_weight,
     )
     profile = ranker.users.get(user_id, {})
     rows = []
@@ -386,7 +387,9 @@ def rank_request(request, demo_user_id=None):
         if any(row["pace_review_support"] for row in rows):
             shown_tags.add(PACE_TAG)
         query_intent = {
-            "status": "applied" if intent.recognized else "semantic" if semantic else "unrecognized",
+            "status": {
+                "rules": "applied", "close": "semantic", "approximate": "approximate"
+            }.get(match, "unrecognized"),
             "query_model": {"id": query_model.MODEL_ID, "weight": semantic_weight} if semantic else None,
             "required_tag_groups": [tag_labels(group) for group in intent.required_groups],
             "excluded_tags": tag_labels(intent.excluded),

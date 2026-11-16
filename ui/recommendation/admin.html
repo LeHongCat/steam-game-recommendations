@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/style.css?v=6">
   <link rel="stylesheet" href="/static/admin.css?v=3">
   <script src="/static/scoring.js?v=1" defer></script>
-  <script src="/static/admin.js?v=3" defer></script>
+  <script src="/static/admin.js?v=4" defer></script>
 </head>
 <body>
   <header class="top">
@@ -111,6 +111,25 @@
               <tbody id="absa-rows"></tbody>
             </table>
           </div>
+        </div>
+      </details>
+
+      <details id="evaluation-browser" class="metric-panel absa-browser">
+        <summary>Offline evaluation and serving metrics</summary>
+        <p class="muted small">E1–E5 on the same chronological test split. The target is a held-out game the user recommended. Measuring ABSA Macro-F1 requires human labels.</p>
+        <p id="evaluation-status" class="muted small" aria-live="polite"></p>
+        <div id="evaluation-content" hidden>
+          <div id="evaluation-stats" class="stats admin-stats"></div>
+          <p id="evaluation-split" class="muted small"></p>
+          <div class="table-scroll">
+            <table class="activity-table">
+              <thead><tr><th scope="col">Configuration</th><th scope="col">Recall@10</th><th scope="col">NDCG@10</th><th scope="col">MAP@10</th><th scope="col">Coverage</th></tr></thead>
+              <tbody id="evaluation-rows"></tbody>
+            </table>
+          </div>
+          <h3>API and feedback</h3>
+          <dl id="serving-metrics"></dl>
+          <p id="evaluation-versions" class="muted small"></p>
         </div>
       </details>
     </div>

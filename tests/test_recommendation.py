@@ -188,7 +188,7 @@ class RecommendationTests(unittest.TestCase):
             patch.object(recommendation_api, "snapshot", return_value=(ranker, report)),
             TestClient(recommendation_api.app) as web,
         ):
-            result = web.post("/recommend", json={"query": "Drive trucks across Europe", "top_k": 1}).json()
+            result = web.post("/recommend", json={"query": "Deliver cargo across the continent", "top_k": 1}).json()
             self.assertEqual(result["query_intent"]["status"], "semantic")
             self.assertEqual(result["ranking"], {"top_k": 1, "eligible_candidates": 2, "returned": 1})
             row = result["recommendations"][0]
@@ -202,9 +202,9 @@ class RecommendationTests(unittest.TestCase):
             self.assertEqual(step["after"], trace["final_score"])
             self.assertEqual(trace["final_score"], row["score"])
             self.query_score.return_value = {"1": 0.78, "2": 0.76, "3": 0.73, "4": 0.70}
-            unknown = web.post("/recommend", json={"query": "xyz"}).json()
-            self.assertEqual(unknown["query_intent"]["status"], "unrecognized")
-            self.assertEqual(unknown["recommendations"], [])
+            approximate = web.post("/recommend", json={"query": "xyz"}).json()
+            self.assertEqual(approximate["query_intent"]["status"], "approximate")
+            self.assertEqual(approximate["recommendations"][0]["item_id"], "1")
 
     def test_query_parses_vietnamese_conditions_and_priorities(self):
         intent = parse_query(
@@ -220,6 +220,9 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(parse_query("Smooth performance at 60 FPS").required_groups, [])
         self.assertEqual(parse_query("don't want horror").excluded, {1667})
         self.assertFalse(parse_query("không cần FPS").recognized)
+        self.assertEqual(parse_query("I want to play a nice action game").required_groups, [{19}])
+        self.assertEqual(parse_query("Lái xe tải chở hàng xuyên châu Âu").required_groups, [{1644}])
+        self.assertEqual(parse_query("game hành động đẹp mắt").aspects, ["GRAPHICS#GENERAL"])
 
     def test_query_filter_precedes_ranking_and_reports_missing_preferences(self):
         games = {
@@ -254,7 +257,7 @@ class RecommendationTests(unittest.TestCase):
             self.assertEqual(unavailable["recommendations"], [])
             unknown = web.post("/recommend", json={"query": "xyz"}).json()
             self.assertEqual(unknown["query_intent"]["status"], "unrecognized")
-            self.assertEqual(unknown["recommendations"], [])
+            self.assertTrue(unknown["recommendations"])
             self.assertEqual(web.post("/recommend", json={"query": "x" * 401}).status_code, 422)
 
     def test_features_only_use_reviews_in_fitted_window(self):

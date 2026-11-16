@@ -14,8 +14,8 @@ Mặc định script dùng `../database` và bản export `backfill-50x1000-2026
 
 ## Demo hai màn hình
 
-1. Mở [màn hình User](http://localhost:18082/) và đăng nhập bằng User ID **1**, **2** hoặc **3**. Nhập nhu cầu, chọn thêm game đã thích rồi bấm **Find games**. Xếp hạng dùng lịch sử review tích cực, game đã mở qua Steam trong các lượt demo trước và lựa chọn hiện tại.
-2. Mở **Score and review evidence** để xem điểm thành phần, công thức rerank, điểm cuối và trích đoạn review. Bấm **Open on Steam** để ghi click hoặc **Dismiss** để ghi dismiss.
+1. Mở [màn hình User](http://localhost:18082/) và chọn hồ sơ **User 1**, **2** hoặc **3**. Màn hình hiện ngay **Picked for you** từ lịch sử review của hồ sơ. Gõ nhu cầu rồi nhấn Enter, hoặc bấm một câu mẫu. **Games you like**, **Review aspects** và số kết quả (6/12/20) cập nhật danh sách ngay khi thay đổi. Xếp hạng dùng lịch sử review tích cực, game đã mở qua Steam trong các lượt demo trước và lựa chọn hiện tại.
+2. Bấm **Why this game?** để mở panel bên phải: lý do bằng lời, thanh đóng góp của từng tín hiệu, các bước điều chỉnh, phép tính chính xác (**Show the exact calculation**) và trích đoạn review theo aspect. Bấm **Open on Steam** để ghi click, **Not interested** hoặc dấu × trên thẻ để ghi dismiss.
 3. Mở [màn hình Admin](http://localhost:18082/admin) ở tab khác, nhập PIN **2468**. Trong **Searches**, mở lượt tìm và bấm **Calculation** ở cột **Score**. Admin đọc phép tính đã lưu khi API trả kết quả. Với lượt tìm trước khi bổ sung tính năng này, hệ thống có điểm cuối đã lưu.
 
 Phiên Admin và User có cookie riêng. Mã `2468` dành cho demo localhost, có thể đổi bằng cách đặt `STEAM_DEMO_ADMIN_PIN` rồi chạy `docker compose up -d recommendation`. Lượt tìm của các hồ sơ demo được lưu trong `events.sqlite`. Biểu đồ game đã xem đếm một lần cho mỗi cặp lượt tìm–game có mở chi tiết hoặc click ra Steam. Chỉ số hiển thị đếm các thẻ đã vào khung nhìn. Lượt tìm được thống kê từ lúc tính năng lưu User ID được bật.
@@ -23,7 +23,7 @@ Phiên Admin và User có cookie riêng. Mã `2468` dành cho demo localhost, c�
 ## Sử dụng bộ bàn giao ABSA
 
 - Aspect là một chủ đề được nhắc trong review, ví dụ Graphics, Story hoặc Gameplay. Phase 1 dùng `SovetskySoyuz110/Category_and_Polarity_ABSA_with_Game_Domain_FlanT5` để gán aspect và polarity. `build_config.json` ghi chế độ chấm điểm sentiment `deberta`.
-- `absa_sentences.parquet` nối câu nguồn với prediction theo review ID, chỉ số câu và nhãn. **Score and review evidence** hiển thị trích đoạn ngắn kèm nhãn polarity do ABSA dự đoán.
+- `absa_sentences.parquet` nối câu nguồn với prediction theo review ID, chỉ số câu và nhãn. Panel **Why this game?** hiển thị trích đoạn ngắn kèm nhãn polarity do ABSA dự đoán.
 - `item_dict.json`, `user_dict.json` và `games.parquet` được đối chiếu với profile tính từ prediction và catalog Steam. Cache inference JSONL được đối chiếu theo khóa câu và nhãn. Kết quả kiểm tra nằm trong `handoff_audit.json` và màn hình Admin **ABSA data and coverage**.
 - Admin có thể chọn một game để xem số review được xử lý, số review nhắc từng khía cạnh và phân bố polarity. User thấy các khía cạnh thường nhắc trong lịch sử review của hồ sơ demo.
 
@@ -45,10 +45,10 @@ E1 tính popularity bằng tỷ lệ recommend có làm mượt. E2 dùng item-t
 
 ## Tìm game bằng câu nhập tự do
 
-Nhập **“I want a fast-paced FPS with beautiful graphics”** hoặc **“Lái xe tải chở hàng xuyên châu Âu”**. Model `intfloat/multilingual-e5-small` so sánh câu nhập với title, description và Steam tags trong catalog. Bộ nhận diện tiêu chí rõ ràng hỗ trợ tiếng Việt và tiếng Anh. Nếu chỉ dùng ngữ nghĩa, API giữ các game gần điểm cao nhất khi similarity đủ mạnh. Khi model vắng mặt, các tag và aspect nhận diện được vẫn hoạt động. [Multilingual E5](https://huggingface.co/intfloat/multilingual-e5-small)
+Nhập **“I want a fast-paced FPS with beautiful graphics”** hoặc **“Lái xe tải chở hàng xuyên châu Âu”**. Model `intfloat/multilingual-e5-small` so sánh câu nhập với title, description và Steam tags trong catalog. Bộ nhận diện tiêu chí rõ ràng hỗ trợ tiếng Việt và tiếng Anh. Nếu chỉ dùng ngữ nghĩa, API giữ các game gần điểm cao nhất khi similarity đủ mạnh; khi không game nào đủ gần, API vẫn xếp toàn catalog theo similarity và trả `status=approximate` để UI báo kết quả chỉ gần đúng. Khi model vắng mặt, các tag và aspect nhận diện được vẫn hoạt động; câu không nhận diện được trả về gợi ý theo hồ sơ với `status=unrecognized`. [Multilingual E5](https://huggingface.co/intfloat/multilingual-e5-small)
 
-- **FPS**, **RPG**, **thế giới mở** và các thể loại được hỗ trợ lọc theo tag trong snapshot Steam. Với FPS, hệ thống dùng 5 tag đầu từ Bronze khi còn catalog gốc, để giảm game chỉ được gắn FPS như tag phụ. Dùng **hoặc** giữa hai thể loại để chấp nhận một trong hai. Cụm trực tiếp như **không kinh dị** loại game mang tag Horror.
-- **Đồ họa**, **gameplay**, **cốt truyện** và các khía cạnh khác dùng điểm sentiment từ ABSA Phase 1 để xếp hạng. Mở **Điểm và bằng chứng** để xem điểm và số review nhắc đến khía cạnh.
+- **FPS**, **RPG**, **hành động**, **lái xe**, **thể thao**, **thế giới mở** và các thể loại được hỗ trợ lọc theo tag trong snapshot Steam. Với FPS, hệ thống dùng 5 tag đầu từ Bronze khi còn catalog gốc, để giảm game chỉ được gắn FPS như tag phụ. Dùng **hoặc** giữa hai thể loại để chấp nhận một trong hai. Cụm trực tiếp như **không kinh dị** loại game mang tag Horror.
+- **Đồ họa**, **gameplay**, **cốt truyện** và các khía cạnh khác dùng điểm sentiment từ ABSA Phase 1 để xếp hạng. Mở **Why this game?** để xem điểm và số review nhắc đến khía cạnh.
 - **Nhịp độ nhanh** được ưu tiên khi game có tag Fast-Paced hoặc ít nhất hai review có câu nhắc `fast-paced` hay `high-octane` và được ABSA gắn nhãn gameplay tích cực. UI báo khi kết quả thiếu bằng chứng. Khi catalog thiếu game khớp bộ lọc, API trả danh sách rỗng.
 
 API nhận trường tùy chọn `query`, tối đa 400 ký tự, trong `POST /recommend`. Phản hồi có `query_intent`, tóm tắt `ranking` và `scoring` theo game. Để trống query để dùng hồ sơ, game đã thích và aspect chọn trực tiếp. Tags phản ánh snapshot lúc crawl. [Steam Tags](https://partner.steamgames.com/doc/store/tags)
